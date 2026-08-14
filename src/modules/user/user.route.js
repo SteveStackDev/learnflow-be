@@ -9,8 +9,11 @@ import {
   forgotPassword,
   verifyOTP,
   changePassword,
+  resetPassword,
+  verifyEmail,
 } from "#modules/user/user.controller.js";
-import { validatePassword } from "./user.middleware";
+import { validatePassword } from "#modules/user/user.middleware.js";
+import notificationService from "#services/notification.service.js";
 
 const router = express.Router();
 
@@ -26,5 +29,6 @@ router.post("/verify-otp", verifyOTP);
 router.post("/change-password", validatePassword, changePassword);
 router.post("/reset-password", validatePassword, resetPassword);
 router.post("/verify-email", verifyEmail);
+router.post("/notification", notificationService.createNotification);
 
 export default router;

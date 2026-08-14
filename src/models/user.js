@@ -93,14 +93,6 @@ const userSchema = new mongoose.Schema(
           enum: ["pending", "accepted", "declined"],
           default: "pending",
         },
-        senderId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-        receiverId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
       },
     ],
     badges: [

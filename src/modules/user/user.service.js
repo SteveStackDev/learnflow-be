@@ -60,10 +60,6 @@ class UserService {
                   req.session.passport.user.id,
                 ),
                 status: "pending",
-                senderId: new mongoose.Types.ObjectId(
-                  req.session.passport.user.id,
-                ),
-                receiverId: new mongoose.Types.ObjectId(req.body.receiverId),
               },
             },
           },
@@ -82,10 +78,6 @@ class UserService {
               friends: {
                 userId: new mongoose.Types.ObjectId(req.body.receiverId),
                 status: "pending",
-                senderId: new mongoose.Types.ObjectId(
-                  req.session.passport.user.id,
-                ),
-                receiverId: new mongoose.Types.ObjectId(req.body.receiverId),
               },
             },
           },

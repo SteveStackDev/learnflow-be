@@ -31,6 +31,12 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+notificationSchema.post("save", function (doc) {
+  if (doc) {
+    console.log(doc);
+  }
+});
+
 const Notification = mongoose.model("Notification", notificationSchema);
 
 export default Notification;

@@ -8,6 +8,9 @@ import { getFileType } from "#utils/getFileType.js";
 import uploadService from "#services/upload.service.js";
 import { getIO } from "#configs/socketIO.js";
 import User from "#models/user.js";
+import { redisClient } from "#configs/redis.js";
+
+let userInteractionStatusStorage = redisClient;
 
 class chatService {
   async createConversation(req) {
@@ -70,13 +73,6 @@ class chatService {
               );
           });
         }
-
-        // Client sẽ nhận được welcomeSystemMessage và newConversation
-        // CLient sẽ if/else hoặc switch/case
-        // Nếu là người tạo conversation thì render là Bạn đã tạo...
-        // Những người không tạo conversation thì render là <admin_username> đã tạo...
-        // Check tiếp nếu id session trùng với id member sẽ render là Bạn đã tham gia...
-        // Những người khác sẽ render là <member_username> đã tham gia...
 
         io.of("/chat")
           .to(newConversation._id.toString())
@@ -243,6 +239,70 @@ class chatService {
         await uploadService.deleteFile(uploadedFile.url_id, "image");
       }
       throw error;
+    }
+  }
+
+  async changeUserInteractionStatusToOnline(userId) {
+    try {
+      const user = await userInteractionStatusStorage.get(
+        `user_interaction_status_count:${userId}`,
+      );
+
+      if (user && user >= 0) {
+        await userInteractionStatusStorage.incr(
+          `user_interaction_status_count:${userId}`,
+        );
+      } else {
+        await userInteractionStatusStorage.set(
+          `user_interaction_status_count:${userId}`,
+          0,
+        );
+      }
+
+      return user;
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  async changeUserInteractionStatusToOffline(userId) {
+    try {
+      const user = await userInteractionStatusStorage.get(
+        `user_interaction_status_count:${userId}`,
+      );
+
+      if (user && user > 0) {
+        await userInteractionStatusStorage.decr(
+          `user_interaction_status_count:${userId}`,
+        );
+      }
+
+      return user;
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  async getAllUserInteractionStatus() {
+    try {
+      const usersOnline = new Map();
+      const usersOffline = new Map();
+      const users = await userInteractionStatusStorage.keys(
+        "user_interaction_status_count:*",
+      );
+
+      for (const user of users) {
+        const value = await userInteractionStatusStorage.get(user);
+        if (value > 0) {
+          usersOnline.set(key.slice(key.indexOf(":") + 1), value);
+        } else {
+          usersOffline.set(key.slice(key.indexOf(":") + 1), value);
+        }
+      }
+
+      return { usersOnline, usersOffline };
+    } catch (error) {
+      console.log(error.message);
     }
   }
 }

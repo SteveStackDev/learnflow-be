@@ -1,4 +1,6 @@
 import "dotenv/config";
+import nodemailer from "nodemailer";
+import hbs from "nodemailer-express-handlebars";
 
 const transporter = nodemailer.createTransport({
   port: 465,

@@ -4,14 +4,12 @@ import Conversation from "#models/conversation.js";
 import Message from "#models/message.js";
 import User from "#models/user.js";
 import mongoose from "mongoose";
+import chatService from "#modules/chat/chat.service.js";
+import { $ZodCheckBigIntFormat } from "zod/v4/core";
 
-// Cần làm một hệ thống notification cho cả web
-// Cần làm hệ thống comment cho cả web
-// Tách code ra các service real-time
 export const chatSocketIO = () => {
   const io = getIO();
   const chatNameSpace = io.of("/chat");
-  let userOnline = [];
 
   chatNameSpace.use(ensureAuthSocket);
 
@@ -20,23 +18,41 @@ export const chatSocketIO = () => {
 
     const userId = socket.request.user._id.toString();
 
-    const userOnlineStatus = await User.findByIdAndUpdate(
-      socket.request.user._id,
-      { interactionStatus: "online" },
-      { returnDocument: "after" },
-    );
-
-    if (userId && userOnlineStatus) {
-      userOnline.push({
-        id: userOnlineStatus._id.toString(),
-      });
+    if (
+      userId &&
+      chatService.changeUserInteractionStatusToOnline(userId) !== 0
+    ) {
       socket.join(`${userId}`);
+
+      const userOnlineStatus = await User.findByIdAndUpdate(
+        socket.request.user._id,
+        { interactionStatus: "online" },
+        { returnDocument: "after" },
+      );
+
+      if (userOnlineStatus) {
+        chatNameSpace
+          .to(`${userId}`)
+          .emit(
+            "changeOnlineFriendsList",
+            ({ usersOnline, usersOffline } =
+              chatService.getAllUserInteractionStatus),
+          );
+      }
     } else {
       console.log(
         `Socket ${socket.id} không hợp lệ (Không tìm thấy thông tin user). Tiến hành ngắt...`,
       );
       socket.disconnect(true);
     }
+
+    const friendslist = await User.findById(
+      new mongoose.Types.ObjectId(userId),
+    ).populate("friends.userId", "_id").friends;
+
+    friendslist.forEach((friend) => {
+      socket.join(`${friend.userId._id.toString()}`);
+    });
 
     socket.on("joinConversation", async (data) => {
       if (data.roomId) {
@@ -163,8 +179,8 @@ export const chatSocketIO = () => {
 
     socket.on("sendMessage", async (data) => {
       if (data.roomId) {
-        let isUserOffline = [];
-        let isUserOnline = [];
+        let { usersOnline, usersOffline } =
+          chatService.getAllUserInteractionStatus();
         const io = getIO();
         const socketsInRoom = socket.adapter.rooms.get(data.roomId);
         const socketsInRoomCount = socketsInRoom.size;
@@ -180,33 +196,25 @@ export const chatSocketIO = () => {
           conversation &&
           socketsInRoomCount !== conversation.participants.length + 1
         ) {
-          participantsWithCreator.forEach((participant) => {
-            if (userOnline.some((user) => user.id === participant.toString())) {
-              isUserOnline.push({
-                id: participant.toString(),
-              });
-            } else {
-              isUserOffline.push({
-                id: participant.toString(),
-              });
-            }
-          });
+          for (const [key, value] of usersOnline) {
+            const usersOnlineSockets = io.of("/chat").adapter.rooms.get(key);
 
-          for (const user of isUserOnline) {
-            const isUserOnlineSockets = io
-              .of("/chat")
-              .adapter.rooms.get(user.id);
+            const usersOnlineInRoom = participantsWithCreator.includes(
+              new mongoose.Types.ObjectId(key),
+            )
+              ? Array.from(usersOnlineSockets).some((socketId) =>
+                  socketsInRoom.has(socketId),
+                )
+                ? true
+                : false
+              : null;
 
-            const isUserOnlineInRoom = Array.from(isUserOnlineSockets).some(
-              (socketId) => socketsInRoom.has(socketId),
-            );
-
-            if (!isUserOnlineInRoom) {
+            if (usersOnlineInRoom !== null && !usersOnlineInRoom) {
               const userUnreadMessageCounts = await Conversation.updateOne(
                 {
                   _id: data.roomId,
                   "unreadMessageCounts.userId": new mongoose.Types.ObjectId(
-                    user.id,
+                    key,
                   ),
                 },
                 {
@@ -222,7 +230,7 @@ export const chatSocketIO = () => {
                   {
                     $push: {
                       unreadMessageCounts: {
-                        userId: new mongoose.Types.ObjectId(user.id),
+                        userId: new mongoose.Types.ObjectId(key),
                         count: 0,
                         lastReadMessageId: null,
                         lastReadAt: null,
@@ -234,35 +242,43 @@ export const chatSocketIO = () => {
             }
           }
 
-          for (const user of isUserOffline) {
-            const userUnreadMessageCounts = await Conversation.updateOne(
-              {
-                _id: data.roomId,
-                "unreadMessageCounts.userId": new mongoose.Types.ObjectId(
-                  user.id,
-                ),
-              },
-              {
-                $inc: {
-                  "unreadMessageCounts.$.count": 1,
-                },
-              },
-            );
+          for (const [key, value] of usersOffline) {
+            const usersOfflineInRoom = participantsWithCreator.includes(
+              new mongoose.Types.ObjectId(key),
+            )
+              ? true
+              : false;
 
-            if (userUnreadMessageCounts.matchedCount === 0) {
-              await Conversation.updateOne(
-                { _id: roomId },
+            if (!usersOfflineInRoom) {
+              const userUnreadMessageCounts = await Conversation.updateOne(
                 {
-                  $push: {
-                    unreadMessageCounts: {
-                      userId: new mongoose.Types.ObjectId(userId),
-                      count: 0,
-                      lastReadMessageId: null,
-                      lastReadAt: null,
-                    },
+                  _id: data.roomId,
+                  "unreadMessageCounts.userId": new mongoose.Types.ObjectId(
+                    key,
+                  ),
+                },
+                {
+                  $inc: {
+                    "unreadMessageCounts.$.count": 1,
                   },
                 },
               );
+
+              if (userUnreadMessageCounts.matchedCount === 0) {
+                await Conversation.updateOne(
+                  { _id: data.roomId },
+                  {
+                    $push: {
+                      unreadMessageCounts: {
+                        userId: new mongoose.Types.ObjectId(userId),
+                        count: 0,
+                        lastReadMessageId: null,
+                        lastReadAt: null,
+                      },
+                    },
+                  },
+                );
+              }
             }
           }
         }
@@ -391,20 +407,20 @@ export const chatSocketIO = () => {
     });
 
     socket.on("disconnect", async () => {
-      const userOfflineStatus = await User.findByIdAndUpdate(
-        socket.request.user._id,
-        { interactionStatus: "offline" },
-        { returnDocument: "after" },
-      );
-
-      if (userOfflineStatus) {
-        userOnline.splice(
-          userOnline.findIndex((user) => {
-            return user.id === userOfflineStatus._id.toString();
-          }),
-          1,
+      if (
+        chatService.changeUserInteractionStatusToOffline(
+          socket.request.user._id.toString(),
+        ) === 0
+      ) {
+        const userOfflineStatus = await User.findByIdAndUpdate(
+          socket.request.user._id,
+          { interactionStatus: "offline" },
+          { returnDocument: "after" },
         );
-        console.log(`Có thiết bị ngắt kết nối: ${socket.id}.`);
+
+        if (userOfflineStatus) {
+          console.log(`Có thiết bị ngắt kết nối: ${socket.id}.`);
+        }
       }
     });
   });
