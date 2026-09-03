@@ -24,11 +24,11 @@ const userSchema = new mongoose.Schema(
       url: {
         type: String,
         default:
-          "https://res.cloudinary.com/learnflow/image/upload/v1784343163/LearnFlow/avatars/ofppjnju83x47exdahtc.jpg",
+          "https://res.cloudinary.com/learnflow/image/upload/v1784343163/FySet/avatars/ofppjnju83x47exdahtc.jpg",
       },
       urlId: {
         type: String,
-        default: "LearnFlow/avatars/ofppjnju83x47exdahtc",
+        default: "FySet/avatars/ofppjnju83x47exdahtc",
       },
     },
     role: {

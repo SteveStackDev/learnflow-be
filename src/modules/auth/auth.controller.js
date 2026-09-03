@@ -3,6 +3,7 @@ import ApiError from "#utils/ApiError.js";
 import { getIO } from "#configs/socketIO.js";
 import jwtService from "#services/jwt.service.js";
 import mailService from "#services/mail.service.js";
+import { createUser } from "#modules/auth/auth.service.js";
 
 // GET
 export const signUpGet = async (req, res, next) => {
@@ -30,8 +31,8 @@ export const signInGet = async (req, res, next) => {
 export const homeGet = async (req, res, next) => {
   try {
     res.status(StatusCodes.OK).json({
-      success: true,
       message: "Chào mừng đến trang chủ",
+      data: req.user || null,
     });
   } catch (error) {
     next(error);
@@ -77,26 +78,34 @@ export const authGithub = async (req, res, next) => {
 // POST
 export const signUpPost = async (req, res, next) => {
   try {
-    const token = await jwtService.generateJWT({
-      id: req.user._id,
-    });
+    const { username, email, password } = req.body;
+    const newUser = await createUser({ username, email, password });
 
-    if (token) {
-      await mailService.sendMail(
-        req.user.email,
-        "Xác thực email",
-        "email.page.hbs",
-        {
-          userName: req.user.username,
-          verifyUrl: `http://localhost:3000/api/v1/verify-email?token=${token}`,
-        },
-      );
+    req.logIn(newUser, async (err) => {
+      if (err) return next(err);
 
-      return res.status(StatusCodes.OK).json({
-        message: "Đăng ký thành công",
-        data: req.user,
+      const token = await jwtService.generateJWT({
+        id: newUser._id,
       });
-    }
+
+      if (token) {
+        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        await mailService.sendMail(
+          newUser.email,
+          "Xác thực email",
+          "email.page.hbs",
+          {
+            userName: newUser.username,
+            verifyUrl: `${clientUrl}/verify-email?token=${token}`,
+          },
+        );
+      }
+
+      return res.status(StatusCodes.CREATED).json({
+        message: "Đăng ký thành công",
+        data: newUser,
+      });
+    });
   } catch (error) {
     next(error);
   }
@@ -142,7 +151,7 @@ export const SignOut = async (req, res, next) => {
           io.in(`${userId}`).disconnectSockets(true);
         }
 
-        res.clearCookie("LearnFlow", { path: "/" });
+        res.clearCookie("FySet", { path: "/" });
         return res.redirect("/api/v1/auth/");
       });
     });

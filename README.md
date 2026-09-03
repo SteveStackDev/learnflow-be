@@ -177,7 +177,7 @@ npm run lint
 Tất cả các API nghiệp vụ đều có tiền tố: `http://localhost:3000/api/v1`
 
 > ⚠️ **Quy tắc xác thực quan trọng**:
-> - Hệ thống sử dụng cơ chế **Cookie Session** (Cookie name: `LearnFlow`, `httpOnly: true`).
+> - Hệ thống sử dụng cơ chế **Cookie Session** (Cookie name: `FySet`, `httpOnly: true`).
 > - Khi gọi API từ Frontend (Axios / Fetch), **BẮT BUỘC** phải bật cấu hình `withCredentials: true` (hoặc `credentials: 'include'`).
 
 ---
@@ -226,16 +226,14 @@ Tất cả các API nghiệp vụ đều có tiền tố: `http://localhost:3000
 
 - **Đăng nhập (`POST /api/v1/auth/sign-in`)**:
   ```json
-  // Request Body
+  // Request Body (Hỗ trợ identifier, email hoặc username)
   {
-    "username": "coder_fyset",
-    "email": "user@fyset.dev",
-    "password": "Password123!",
-    "confirmPassword": "Password123!"
+    "identifier": "user@fyset.dev", // hoặc "coder_fyset"
+    "password": "Password123!"
   }
   ```
   ```json
-  // Response (200 OK) - Kèm Set-Cookie: LearnFlow=...
+  // Response (200 OK) - Kèm Set-Cookie: FySet=...
   {
     "message": "Đăng nhập thành công",
     "data": {

@@ -1,66 +1,80 @@
+import mongoose from "mongoose";
 import ApiError from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 import Comment from "#models/comment.js";
 
-class commentService {
+class CommentService {
   async createComment(req) {
     try {
-      const newComment = await Comment.insertOne({
-        authorId: new mongoose.Types.ObjectId(req.session.passport.user.id),
-        content: req.body.content,
-        targetType: req.body.targetType,
-        parentId: req.body.parentId ? req.body.parentId : null,
-      });
+      const authorId =
+        req.user?._id ||
+        (req.session?.passport?.user?.id
+          ? new mongoose.Types.ObjectId(req.session.passport.user.id)
+          : null);
 
-      if (newComment) {
-        return newComment;
+      if (!authorId) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, "Vui lòng đăng nhập để bình luận");
       }
 
-      return;
+      const { content, targetType, targetId, parentId } = req.body;
+
+      if (!content || !targetType || !targetId) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          "Nội dung, loại đối tượng và mã đối tượng là bắt buộc!",
+        );
+      }
+
+      const newComment = await Comment.create({
+        authorId,
+        content: content.trim(),
+        targetType,
+        targetId: new mongoose.Types.ObjectId(targetId),
+        parentId: parentId ? new mongoose.Types.ObjectId(parentId) : null,
+      });
+
+      // Populate thông tin người tạo bình luận
+      const populatedComment = await Comment.findById(newComment._id).populate(
+        "authorId",
+        "username avatar email name",
+      );
+
+      return populatedComment || newComment;
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Tạo comment thất bại",
+        `Tạo bình luận thất bại: ${error.message}`,
       );
     }
   }
 
   async getAllComment(req) {
     try {
-      const allComment = await Comment.find({
-        targetId: req.body.targetId,
-      }).sort({ parentId: 1 });
+      const targetId = req.query?.targetId || req.body?.targetId;
+      const targetType = req.query?.targetType || req.body?.targetType;
 
-      if (allComment) {
-        allComment.forEach((comment) => {
-          if (comment.parentId === null) {
-            comment.childrenComments = [];
-          } else {
-            const childrenComment = comment;
-            allComment.find((comment) => {
-              if (
-                comment._id.toString() === childrenComment.parentId.toString()
-              ) {
-                if (comment.childrenComments) {
-                  comment.childrenComments.push(childrenComment);
-                } else {
-                  comment.childrenComments = [];
-                  comment.childrenComments.push(childrenComment);
-                }
-              }
-            });
-          }
-        });
-
-        return allComment;
+      const query = {};
+      if (targetId) {
+        query.targetId = new mongoose.Types.ObjectId(targetId);
       }
+      if (targetType) {
+        query.targetType = targetType;
+      }
+
+      const allComments = await Comment.find(query)
+        .populate("authorId", "username avatar email name")
+        .sort({ createdAt: -1 });
+
+      return allComments;
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Lấy comment thất bại",
+        `Lấy danh sách bình luận thất bại: ${error.message}`,
       );
     }
   }
 }
 
-export default new commentService();
+export default new CommentService();

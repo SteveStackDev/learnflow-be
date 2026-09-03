@@ -1,37 +1,26 @@
-import ApiError from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 import commentService from "#modules/comment/comment.service.js";
 
-export const createComment = async (req, res) => {
+export const createComment = async (req, res, next) => {
   try {
     const comment = await commentService.createComment(req);
-    if (comment) {
-      res.status(StatusCodes.OK).send({
-        status: "success",
-        message: "Tạo comment thành công",
-      });
-    }
+    return res.status(StatusCodes.CREATED).json({
+      message: "Tạo bình luận thành công",
+      data: comment,
+    });
   } catch (error) {
-    throw new ApiError(
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      "Tạo comment thất bại",
-    );
+    next(error);
   }
 };
 
-export const getAllComment = async (req, res) => {
+export const getAllComment = async (req, res, next) => {
   try {
-    const allComment = await commentService.getAllComment(req);
-    if (allComment) {
-      res.status(StatusCodes.OK).send({
-        status: "success",
-        message: "Lấy comment thành công",
-      });
-    }
+    const allComments = await commentService.getAllComment(req);
+    return res.status(StatusCodes.OK).json({
+      message: "Lấy danh sách bình luận thành công",
+      data: allComments,
+    });
   } catch (error) {
-    throw new ApiError(
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      "Lấy comment thất bại",
-    );
+    next(error);
   }
 };

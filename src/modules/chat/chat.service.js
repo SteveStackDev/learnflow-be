@@ -111,7 +111,7 @@ class chatService {
 
             const urlResult = await uploadService.uploadFile(
               file.path,
-              "LearnFlow/attachments",
+              "FySet/attachments",
               resourceType,
               file.originalname,
             );
@@ -199,7 +199,7 @@ class chatService {
       if (req.file) {
         uploadedFile = await uploadService.uploadFile(
           req.file.path,
-          "LearnFlow/avatars",
+          "FySet/avatars",
           "image",
         );
       }

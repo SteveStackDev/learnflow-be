@@ -11,7 +11,11 @@ import {
   authGithub,
 } from "#modules/auth/auth.controller.js";
 import { ensureAuth } from "#middlewares/ensureAuth.middleware.js";
-import { localStrategy, validateAuth } from "#modules/auth/auth.middleware.js";
+import {
+  localStrategy,
+  validateSignIn,
+  validateSignUp,
+} from "#modules/auth/auth.middleware.js";
 
 const router = express.Router();
 
@@ -57,8 +61,8 @@ router.get(
 );
 
 // POST
-router.post("/sign-up", validateAuth, localStrategy, signUpPost);
-router.post("/sign-in", validateAuth, localStrategy, SignInPost);
+router.post("/sign-up", validateSignUp, signUpPost);
+router.post("/sign-in", validateSignIn, localStrategy, SignInPost);
 router.post("/sign-out", SignOut);
 
 export default router;

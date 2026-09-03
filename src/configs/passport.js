@@ -11,7 +11,8 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await User.findById(new mongoose.Types.ObjectId(id));
+    const userId = id?.id || id;
+    const user = await User.findById(new mongoose.Types.ObjectId(userId));
 
     if (!user) return done(null, false);
 

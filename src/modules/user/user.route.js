@@ -19,6 +19,7 @@ const router = express.Router();
 
 // GET
 router.get("/friend", getAllFriend);
+router.get("/verify-email", verifyEmail);
 
 // POST
 router.post("/avatar", ensureAuth, upload.single("image"), updateAvatar);

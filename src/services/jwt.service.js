@@ -2,28 +2,28 @@ import "dotenv/config";
 import jwt from "jsonwebtoken";
 
 class JWTService {
-  async generateJWT(payload) {
-    const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, {
-      expiresIn: "3m",
+  generateJWT(payload, expiresIn = "3m") {
+    return jwt.sign(payload, process.env.JWT_SECRET_KEY, {
+      expiresIn,
     });
-
-    return token;
   }
 
-  async validateJWT(req) {
-    const authHeader = req.headers["authorization"];
+  validateJWT(req) {
+    try {
+      const authHeader = req.headers?.["authorization"];
+      const token =
+        authHeader && authHeader.startsWith("Bearer ")
+          ? authHeader.split(" ")[1]
+          : req.body?.token || req.query?.token || req.params?.token;
 
-    jwt.verify(
-      authHeader ? authHeader.split(" ")[1] : req.param.token,
-      process.env.JWT_SECRET_KEY,
-      (err, user) => {
-        if (err) {
-          return "TOKEN KHÔNG HỢP LỆ HOẶC TOKEN HẾT HẠN";
-        }
+      if (!token) return null;
 
-        return user;
-      },
-    );
+      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      return decoded;
+    } catch (err) {
+      console.warn("JWT validation failed:", err.message);
+      return null;
+    }
   }
 }
 

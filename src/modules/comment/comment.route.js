@@ -1,6 +1,6 @@
 import express from "express";
 import { ensureAuth } from "#middlewares/ensureAuth.middleware.js";
-import { createComment, getAllComment } from "./comment.controller";
+import { createComment, getAllComment } from "./comment.controller.js";
 
 const router = express.Router();
 

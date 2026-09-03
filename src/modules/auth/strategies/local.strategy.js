@@ -11,15 +11,15 @@ passport.use(
     },
     async (req, username, password, done) => {
       try {
-        const user = await checkUserAvailable(
-          username,
-          password,
-          req.body.email,
-        );
+        // Hỗ trợ nhận diện qua identifier, email hoặc username từ body
+        const identifier =
+          req.body.identifier || username || req.body.email;
+
+        const user = await checkUserAvailable(identifier, password);
 
         if (!user) {
           return done(null, false, {
-            message: "Tài khoản hoặc mật khẩu hoặc email không đúng",
+            message: "Tên đăng nhập/email hoặc mật khẩu không chính xác",
           });
         }
 

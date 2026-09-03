@@ -25,7 +25,7 @@ const connectServer = () => {
 
   // Express Session
   const sessionMiddleware = session({
-    name: "LearnFlow",
+    name: "FySet",
     store: new RedisStore({
       client: redisClient,
     }),

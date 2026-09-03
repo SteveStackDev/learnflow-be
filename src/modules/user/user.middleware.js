@@ -1,26 +1,32 @@
+import { z } from "zod";
+import { StatusCodes } from "http-status-codes";
+import ApiError from "#utils/ApiError.js";
+
 export const validatePassword = (req, res, next) => {
   const validateAuthSchema = z
     .object({
+      email: z.string().trim().email("Email không hợp lệ").optional(),
+      oldPassword: z.string().optional(),
       password: z
         .string({ required_error: "Mật khẩu là bắt buộc" })
-        .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
-        .max(100, "Mật khẩu quá dài")
-        .regex(/[a-z]/, "Mật khẩu phải chứa ít nhất 1 chữ cái viết thường")
-        .regex(/[A-Z]/, "Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa")
-        .regex(/[0-9]/, "Mật khẩu phải chứa ít nhất 1 chữ số")
-        .regex(
-          /[^a-zA-Z0-9]/,
-          "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&...)",
-        ),
-
-      confirmPassword: z.string({
-        required_error: "Xác nhận mật khẩu là bắt buộc",
-      }),
+        .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+        .max(100, "Mật khẩu quá dài"),
+      newPassword: z.string().optional(),
+      confirmPassword: z.string().optional(),
     })
-    .refine((data) => data.password === data.confirmPassword, {
-      message: "Mật khẩu xác nhận không khớp",
-      path: ["confirmPassword"],
-    });
+    .refine(
+      (data) => {
+        if (data.confirmPassword) {
+          const mainPass = data.password || data.newPassword;
+          return mainPass === data.confirmPassword;
+        }
+        return true;
+      },
+      {
+        message: "Mật khẩu xác nhận không khớp",
+        path: ["confirmPassword"],
+      },
+    );
 
   const result = validateAuthSchema.safeParse(req.body);
 
@@ -34,12 +40,13 @@ export const validatePassword = (req, res, next) => {
     return next(
       new ApiError(
         StatusCodes.BAD_REQUEST,
-        "Dữ liệu không hợp lệ",
+        "Dữ liệu mật khẩu không hợp lệ",
         formattedErrors,
       ),
     );
   }
 
-  req.body = result.data;
+  // Giữ lại các trường hợp lệ và các trường mở rộng
+  req.body = { ...req.body, ...result.data };
   next();
 };

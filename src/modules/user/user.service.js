@@ -16,7 +16,7 @@ class UserService {
       if (req.file) {
         uploadedFile = await uploadService.uploadFile(
           req.file.path,
-          "LearnFlow/avatars",
+          "FySet/avatars",
           "image",
         );
       }
@@ -140,128 +140,152 @@ class UserService {
 
   async getAllFriend(req) {
     try {
-      const friendsList = await User.findOne(
-        {
-          _id: new mongoose.Types.ObjectId(req.session.passport.user.id),
-        },
-        {
-          friends: 1,
-          _id: 0,
-        },
-      );
+      const userId = req.user?._id || req.session?.passport?.user?.id;
+      if (!userId) return [];
 
-      if (friendsList) {
-        return friendsList;
-      }
+      const userDoc = await User.findById(new mongoose.Types.ObjectId(userId))
+        .select("friends")
+        .populate({
+          path: "friends.userId",
+          select:
+            "username avatar name dailyStreak pomodoroStreak experiencePoints rating interactionStatus bio title",
+        });
+
+      return userDoc?.friends || [];
     } catch (error) {
-      console.log(error.message);
+      console.log("Lỗi lấy danh sách bạn bè:", error.message);
+      return [];
     }
   }
 
   async forgotPassword(req) {
     try {
-      const user = await User.findOne({ email: req.body.email });
+      const email = req.body?.email?.trim()?.toLowerCase();
+      if (!email) return null;
+
+      const user = await User.findOne({ email });
       if (user) {
         const token = jwtService.generateJWT({
-          iđ: user._id,
+          id: user._id.toString(),
+          email: user.email,
         });
 
         if (token) {
-          await mailService.sendMail(user.email, "Mã OTP", "otp.page.hbs", {
+          const otp = await otpService.generateOTP(user.email);
+          await mailService.sendMail(user.email, "Mã OTP xác thực", "otp.page.hbs", {
             userName: user.username,
-            otpCode: await otpService.generateOTP(user.email),
+            otpCode: otp,
             expiryMinutes: "3",
           });
 
           return token;
         }
       }
+      return null;
     } catch (error) {
-      console.log(error.message);
+      console.log("Lỗi forgotPassword:", error.message);
+      return null;
     }
   }
 
   async verifyOTP(req) {
     try {
-      const data = await jwtService.validateJWT(req);
-      const user = await User.findById(new mongoose.Types.ObjectId(data.id));
+      const data = jwtService.validateJWT(req);
+      const email =
+        req.body?.email?.trim()?.toLowerCase() ||
+        data?.email ||
+        (data?.id ? (await User.findById(new mongoose.Types.ObjectId(data.id)))?.email : null);
 
-      if (user) {
-        return await otpService.validateOTP(user.email, req.body.otp);
+      if (email && req.body?.otp) {
+        return await otpService.validateOTP(email, req.body.otp);
       }
+      return "Dữ liệu xác thực không hợp lệ";
     } catch (error) {
-      console.log(error.message);
+      console.log("Lỗi verifyOTP:", error.message);
+      return "Lỗi kiểm tra OTP";
     }
   }
 
   async changePassword(req) {
     try {
-      const data = await jwtService.validateJWT(req);
-      const user = await User.findById(new mongoose.Types.ObjectId(data.id));
+      const data = jwtService.validateJWT(req);
+      const email =
+        req.body?.email?.trim()?.toLowerCase() ||
+        data?.email ||
+        (data?.id ? (await User.findById(new mongoose.Types.ObjectId(data.id)))?.email : null);
+      const newPassword = req.body?.password || req.body?.newPassword;
 
-      const comparePasswordResult = await bcrypt.compare(
-        req.body.password,
-        user.password,
-      );
-
-      if (user && comparePasswordResult) {
-        const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
-        await User.updateOne(
-          { email: req.body.email },
-          {
-            $set: {
-              password: hashed_password,
-            },
-          },
-        );
+      if (!email || !newPassword) {
+        throw new Error("Email và mật khẩu mới là bắt buộc");
       }
 
-      return;
-    } catch (error) {
-      console.log(error.message);
-    }
-  }
-
-  async resetPassword(req) {
-    const user = await User.findById(
-      new mongoose.Types.ObjectId(req.session.passport.user.id),
-    );
-
-    const comparePasswordResult = await bcrypt.compare(
-      req.body.oldPassword,
-      user.password,
-    );
-
-    if (user && comparePasswordResult) {
-      const hashed_password = await bcrypt.hash(
-        req.body.newPassword,
-        saltRounds,
-      );
-      await User.updateOne(
-        { _id: new mongoose.Types.ObjectId(req.session.passport.user.id) },
+      const hashed_password = await bcrypt.hash(newPassword, saltRounds);
+      const result = await User.updateOne(
+        { email },
         {
           $set: {
             password: hashed_password,
           },
         },
       );
+
+      return result.modifiedCount > 0;
+    } catch (error) {
+      console.log("Lỗi changePassword:", error.message);
+      throw error;
     }
   }
 
-  async verifyEmail(req) {
-    const data = await jwtService.validateJWT(req);
+  async resetPassword(req) {
+    const userId = req.user?._id || req.session?.passport?.user?.id;
+    if (!userId) return false;
 
-    if (data) {
+    const user = await User.findById(new mongoose.Types.ObjectId(userId));
+    if (!user) return false;
+
+    const comparePasswordResult = await bcrypt.compare(
+      req.body.oldPassword,
+      user.password,
+    );
+
+    if (comparePasswordResult) {
+      const hashed_password = await bcrypt.hash(
+        req.body.newPassword,
+        saltRounds,
+      );
       await User.updateOne(
-        { _id: new mongoose.Types.ObjectId(data.id) },
+        { _id: user._id },
         {
           $set: {
-            accountStatus: "active",
+            password: hashed_password,
           },
         },
       );
+      return true;
+    }
+    return false;
+  }
 
-      return;
+  async verifyEmail(req) {
+    try {
+      const data = jwtService.validateJWT(req);
+
+      if (data && data.id) {
+        const result = await User.updateOne(
+          { _id: new mongoose.Types.ObjectId(data.id) },
+          {
+            $set: {
+              accountStatus: "active",
+            },
+          },
+        );
+
+        return result.modifiedCount > 0;
+      }
+      return false;
+    } catch (error) {
+      console.log("Lỗi verifyEmail:", error.message);
+      return false;
     }
   }
 }

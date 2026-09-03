@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_CONNECTION_STRING, {
-      dbName: "LearnFlow",
+      dbName: "FySet",
     });
     console.log("Kết nối database thành công!");
   } catch (error) {
