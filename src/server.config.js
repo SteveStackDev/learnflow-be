@@ -2,6 +2,7 @@ import "dotenv/config";
 import "#configs/passport.js";
 import express from "express";
 import bodyParser from "body-parser";
+import cors from "cors";
 import rootRoute from "#routes.js";
 import session from "express-session";
 import passport from "passport";
@@ -19,6 +20,14 @@ const PORT = process.env.PORT;
 const connectServer = () => {
   const io = getIO();
 
+  // Middleware For Cors
+  app.use(
+    cors({
+      origin: ["http://localhost:3001", "https://fyset-fe.onrender.com"],
+      credentials: true,
+    }),
+  );
+
   // Middlewares For Data Type From Client
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
@@ -33,7 +42,9 @@ const connectServer = () => {
     saveUninitialized: false,
     resave: false,
     cookie: {
+      httpOnly: true,
       secure: process.env.NODE_ENV === "PRODUCTION",
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   });
