@@ -23,7 +23,11 @@ const connectServer = () => {
   // Middleware For Cors
   app.use(
     cors({
-      origin: "*",
+      origin: [
+        "http://localhost:3001",
+        "https://fyset-fe.onrender.com",
+        "https://fyset-fe.onrender.com/",
+      ],
       credentials: true,
     }),
   );
