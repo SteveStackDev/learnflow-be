@@ -47,8 +47,8 @@ const connectServer = () => {
     resave: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "PRODUCTION",
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
     },
   });
