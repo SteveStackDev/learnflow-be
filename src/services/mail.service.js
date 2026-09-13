@@ -2,13 +2,13 @@ import "dotenv/config";
 import transporter from "#configs/nodemailer.js";
 
 class MailService {
-  async sendMail(receiverEmail, subject, html, context) {
+  async sendMail(receiverEmail, subject, template, context) {
     try {
       const mailData = {
         from: process.env.GOOGLE_NODEMAILER_USER_EMAIL,
         to: receiverEmail,
         subject,
-        html,
+        template,
         context,
       };
 

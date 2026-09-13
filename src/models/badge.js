@@ -2,39 +2,51 @@ import mongoose from "mongoose";
 
 const badgeSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true, unique: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+    code: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+      index: true,
+    },
+    name: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
-    thumbnail: { type: String, required: true },
+    requirementText: { type: String, required: true, trim: true },
+    icon: { type: String, required: true },
     category: {
       type: String,
       required: true,
       enum: ["learning", "contest", "community", "special"],
       default: "learning",
+      index: true,
     },
-    criteria: {
-      type: {
-        type: String,
-        required: true,
-        enum: [
-          "solve_problems",
-          "contest_rank",
-          "daily_streak",
-          "complete_courses",
-          "custom",
-        ],
-      },
-      value: { type: Number, required: true },
+    criteriaType: {
+      type: String,
+      required: true,
+      enum: ["problem", "contest", "streak", "community", "course", "custom"],
     },
-    pointsReward: { type: Number, default: 0 },
+    targetValue: { type: Number, required: true },
+    unitLabel: { type: String, required: true, default: "bài" },
     rarity: {
       type: String,
       enum: ["common", "rare", "epic", "legendary"],
       default: "common",
+      index: true,
     },
     stats: {
-      earnedCount: { type: Number, default: 0 },
+      earnedCount: { type: Number, default: 0, min: 0 },
     },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true, index: true },
+    sortOrder: { type: Number, default: 0 },
   },
   {
     timestamps: true,

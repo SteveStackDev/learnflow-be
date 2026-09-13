@@ -17,11 +17,11 @@ transporter.use(
   hbs({
     viewEngine: {
       extName: ".hbs",
-      layoutsDir: "#views/layouts/",
-      defaultLayout: "#views/layouts/main.layout.hbs",
+      layoutsDir: "src/views/layouts/",
+      defaultLayout: "main.layout.hbs",
     },
     extName: ".hbs",
-    viewPath: "#views/pages/",
+    viewPath: "src/views/pages/",
   }),
 );
 

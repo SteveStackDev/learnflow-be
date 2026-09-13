@@ -10,35 +10,22 @@ const roadmapSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    authorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
     description: { type: String, required: true, trim: true },
-    banner: { type: String, default: "" },
-    difficulty: {
+    thumbnail: { type: String, required: true, trim: true },
+    level: {
       type: String,
+      required: true,
       enum: ["beginner", "intermediate", "advanced"],
-      default: "beginner",
+      trim: true,
     },
-    topics: [
+    roadmap: [
       {
         stepNumber: { type: Number, required: true },
-        topicName: { type: String, required: true, trim: true },
-        description: { type: String, trim: true },
-        attachedCourses: [
+        stepName: { type: String, required: true, trim: true },
+        stepDescription: { type: String, required: true, trim: true },
+        stepAttachedCourses: [
           { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
         ],
-        attachedProblems: [
-          { type: mongoose.Schema.Types.ObjectId, ref: "Problem" },
-        ],
-      },
-    ],
-    enrolledUsers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
       },
     ],
   },

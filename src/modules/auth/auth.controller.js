@@ -85,10 +85,10 @@ export const signUpPost = async (req, res, next) => {
       await mailService.sendMail(
         req.user.email,
         "Xác thực email",
-        "email.page.hbs",
+        "email.page",
         {
           userName: req.user.username,
-          verifyUrl: `http://localhost:3000/api/v1/verify-email?token=${token}`,
+          verifyUrl: `http://localhost:3000/api/v1/user/verify-email?token=${token}`,
         },
       );
 

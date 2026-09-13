@@ -11,7 +11,13 @@ import {
   authGithub,
 } from "#modules/auth/auth.controller.js";
 import { ensureAuth } from "#middlewares/ensureAuth.middleware.js";
-import { localStrategy, validateAuth } from "#modules/auth/auth.middleware.js";
+import {
+  localStrategy,
+  validateAuth,
+  validateAuthSignIn,
+} from "#modules/auth/auth.middleware.js";
+import mongoose from "mongoose";
+import User from "#models/user.js";
 
 const router = express.Router();
 
@@ -49,6 +55,8 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
+    successRedirect: "http://localhost:5173",
+    successMessage: "Tiếp tục bằng Google thành công",
     failureRedirect: "/api/v1/auth/",
     failureMessage: "Tiếp tục bằng Google thất bại",
     session: true,
@@ -56,9 +64,29 @@ router.get(
   authGoogle,
 );
 
+router.get("/get-me", ensureAuth, async (req, res) => {
+  const user = await User.findById(
+    new mongoose.Types.ObjectId(req.session.passport.user.id),
+  );
+
+  if (user) {
+    const data = {
+      name: user.username,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar.url,
+    };
+
+    return res.send({
+      message: "Tiếp tục bằng Google thành công",
+      data: data,
+    });
+  }
+});
+
 // POST
 router.post("/sign-up", validateAuth, localStrategy, signUpPost);
-router.post("/sign-in", validateAuth, localStrategy, SignInPost);
+router.post("/sign-in", validateAuthSignIn, localStrategy, SignInPost);
 router.post("/sign-out", SignOut);
 
 export default router;

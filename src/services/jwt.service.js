@@ -13,11 +13,12 @@ class JWTService {
   async validateJWT(req) {
     const authHeader = req.headers["authorization"];
 
-    jwt.verify(
-      authHeader ? authHeader.split(" ")[1] : req.param.token,
+    return jwt.verify(
+      authHeader ? authHeader.split(" ")[1] : req.query.token,
       process.env.JWT_SECRET_KEY,
       (err, user) => {
         if (err) {
+          console.log(err);
           return "TOKEN KHÔNG HỢP LỆ HOẶC TOKEN HẾT HẠN";
         }
 

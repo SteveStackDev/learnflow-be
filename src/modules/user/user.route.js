@@ -28,7 +28,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/verify-otp", verifyOTP);
 router.post("/change-password", validatePassword, changePassword);
 router.post("/reset-password", validatePassword, resetPassword);
-router.post("/verify-email", verifyEmail);
+router.get("/verify-email", verifyEmail);
 router.post("/notification", notificationService.createNotification);
 
 export default router;

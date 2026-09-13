@@ -5,17 +5,13 @@ import { checkUserAvailable } from "#modules/auth/auth.service.js";
 passport.use(
   new LocalStrategy(
     {
-      usernameField: "username",
+      usernameField: "email",
       passwordField: "password",
       passReqToCallback: true,
     },
-    async (req, username, password, done) => {
+    async (req, email, password, done) => {
       try {
-        const user = await checkUserAvailable(
-          username,
-          password,
-          req.body.email,
-        );
+        const user = await checkUserAvailable(email, password, req.body);
 
         if (!user) {
           return done(null, false, {
