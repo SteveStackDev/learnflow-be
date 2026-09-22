@@ -24,7 +24,7 @@ const connectServer = () => {
   app.use(
     cors({
       origin: [
-        "http://localhost:3001",
+        "http://localhost:5173",
         "https://fyset-fe.onrender.com",
         "https://fyset-fe.onrender.com/",
       ],
@@ -47,8 +47,8 @@ const connectServer = () => {
     resave: false,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   });

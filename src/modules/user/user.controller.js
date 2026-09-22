@@ -145,3 +145,48 @@ export const verifyEmail = async (req, res) => {
     });
   }
 };
+
+export const saveCourse = async (req, res) => {
+  try {
+    const data = await userService.saveCourse(req);
+    return res.status(201).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const updateCourseProgression = async (req, res) => {
+  try {
+    const data = await userService.updateCourseProgression(req);
+    return res.status(201).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getUserCourseCurriculum = async (req, res) => {
+  try {
+    const data = await userService.getUserCourseCurriculum(req);
+    return res.status(201).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const saveCourseNote = async (req, res) => {
+  try {
+    const data = await userService.saveCourseNote(req);
+    return res.status(201).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const deleteCourseNote = async (req, res) => {
+  try {
+    const data = await userService.deleteCourseNote(req);
+    return res.status(201).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

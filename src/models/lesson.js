@@ -62,9 +62,6 @@ const lessonSchema = new mongoose.Schema(
   },
 );
 
-// Compound index giúp sắp xếp bài học trong cùng 1 chương nhanh chóng
-lessonSchema.index({ chapterId: 1, order: 1 });
-
 const Lesson = mongoose.model("Lesson", lessonSchema);
 
 export default Lesson;

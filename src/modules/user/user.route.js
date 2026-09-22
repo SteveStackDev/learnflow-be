@@ -11,6 +11,11 @@ import {
   changePassword,
   resetPassword,
   verifyEmail,
+  getUserCourseCurriculum,
+  updateCourseProgression,
+  saveCourseNote,
+  deleteCourseNote,
+  saveCourse,
 } from "#modules/user/user.controller.js";
 import { validatePassword } from "#modules/user/user.middleware.js";
 import notificationService from "#services/notification.service.js";
@@ -19,6 +24,7 @@ const router = express.Router();
 
 // GET
 router.get("/friend", getAllFriend);
+router.get("/course/progression/:courseId", getUserCourseCurriculum);
 
 // POST
 router.post("/avatar", ensureAuth, upload.single("image"), updateAvatar);
@@ -30,5 +36,9 @@ router.post("/change-password", validatePassword, changePassword);
 router.post("/reset-password", validatePassword, resetPassword);
 router.get("/verify-email", verifyEmail);
 router.post("/notification", notificationService.createNotification);
+router.post("/course/save", saveCourse);
+router.post("/course/update-progression", updateCourseProgression);
+router.post("/course/note/save", saveCourseNote);
+router.post("/course/note/delete", deleteCourseNote);
 
 export default router;

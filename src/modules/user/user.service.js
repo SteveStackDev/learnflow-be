@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwtService from "#services/jwt.service.js";
 import mailService from "#services/mail.service.js";
+import UserCourse from "#models/userCourse.js";
 
 const saltRounds = 10;
 
@@ -262,6 +263,273 @@ class UserService {
       );
 
       return;
+    }
+  }
+
+  async deleteCourseNote(req) {
+    const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+    const courseId = new mongoose.Types.ObjectId(req.body.courseId);
+    const lessonId = new mongoose.Types.ObjectId(req.body.lessonId);
+    const noteText = req.body.note;
+
+    if (!noteText) {
+      throw new Error("Nội dung ghi chú không hợp lệ");
+    }
+
+    const updatedUserCourse = await UserCourse.findOneAndUpdate(
+      {
+        userId: userId,
+        courseId: courseId,
+        "curriculum.lessons.lessonId": lessonId,
+      },
+      {
+        $pull: {
+          "curriculum.$[chapter].lessons.$[lesson].notes": noteText,
+        },
+      },
+      {
+        new: true,
+        arrayFilters: [
+          { "chapter.lessons.lessonId": lessonId },
+          { "lesson.lessonId": lessonId },
+        ],
+      },
+    );
+
+    let remainingNotes = [];
+    if (updatedUserCourse) {
+      for (const chapter of updatedUserCourse.curriculum) {
+        const foundLesson = chapter.lessons.find(
+          (lesson) => lesson.lessonId.toString() === lessonId.toString(),
+        );
+        if (foundLesson) {
+          remainingNotes = foundLesson.notes;
+          break;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      notes: remainingNotes,
+    };
+  }
+
+  async saveCourseNote(req) {
+    const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+    const courseId = new mongoose.Types.ObjectId(req.body.courseId);
+    const lessonId = new mongoose.Types.ObjectId(req.body.lessonId);
+    const noteText = req.body.note;
+
+    if (!noteText || !noteText.trim()) {
+      throw new Error("Nội dung ghi chú không được để trống");
+    }
+
+    const updatedUserCourse = await UserCourse.findOneAndUpdate(
+      {
+        userId: userId,
+        courseId: courseId,
+        "curriculum.lessons.lessonId": lessonId,
+      },
+      {
+        $push: {
+          "curriculum.$[chapter].lessons.$[lesson].notes": noteText.trim(),
+        },
+      },
+      {
+        new: true,
+        arrayFilters: [
+          { "chapter.lessons.lessonId": lessonId },
+          { "lesson.lessonId": lessonId },
+        ],
+      },
+    );
+
+    let updatedNotes = [];
+    if (updatedUserCourse) {
+      for (const ch of updatedUserCourse.curriculum) {
+        const foundLesson = ch.lessons.find(
+          (l) => l.lessonId.toString() === lessonId.toString(),
+        );
+        if (foundLesson) {
+          updatedNotes = foundLesson.notes;
+          break;
+        }
+      }
+    }
+
+    return { success: true, notes: updatedNotes };
+  }
+
+  async saveCourse(req) {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const courseId = new mongoose.Types.ObjectId(req.body.courseId);
+
+      let userCourse = await UserCourse.findOne({ userId, courseId });
+
+      if (userCourse) {
+        return userCourse;
+      }
+
+      const curriculum = await Chapter.aggregate([
+        {
+          $match: { courseId: courseId },
+        },
+        {
+          $lookup: {
+            from: "lessons",
+            let: { chapterId: "$_id", courseId: "$courseId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$chapterId", "$$chapterId"] },
+                      { $eq: ["$courseId", "$$courseId"] },
+                    ],
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  lessonId: "$_id",
+                  status: { $literal: "incompleted" },
+                  progression: { $literal: 0 },
+                },
+              },
+            ],
+            as: "lessons",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            chapterId: "$_id",
+            lessons: 1,
+          },
+        },
+      ]);
+
+      await User.updateOne(
+        { _id: userId },
+        { $addToSet: { courses: courseId } },
+      );
+
+      userCourse = await UserCourse.create({
+        userId: userId,
+        courseId: courseId,
+        curriculum: curriculum,
+        progression: 0,
+        lastAccessedLessonId: curriculum[0]?.lessons[0]?.lessonId || null,
+      });
+
+      return userCourse;
+    } catch (error) {
+      console.error("❌ Error in saveCourse:", error);
+      throw error;
+    }
+  }
+
+  async updateCourseProgression(req) {
+    try {
+      const lessonIdStr = req.body.lessonId || req.body.id;
+      if (!lessonIdStr) {
+        throw new Error("Missing lessonId in request body");
+      }
+
+      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const lessonObjectId = new mongoose.Types.ObjectId(lessonIdStr);
+
+      const userCourse = await UserCourse.findOne({ userId });
+      if (!userCourse) {
+        throw new Error("User course not found");
+      }
+
+      const updatedUserCourse = await UserCourse.findOneAndUpdate(
+        {
+          userId: userId,
+          "curriculum.lessons.lessonId": lessonObjectId,
+        },
+        {
+          $set: {
+            "curriculum.$[chapter].lessons.$[lesson].status": "completed",
+            "curriculum.$[chapter].lessons.$[lesson].progression": 100,
+            "curriculum.$[chapter].lessons.$[lesson].lastAccessedAt":
+              new Date(),
+            lastAccessedLessonId: lessonObjectId,
+          },
+        },
+        {
+          new: true,
+          arrayFilters: [
+            { "chapter.lessons.lessonId": lessonObjectId },
+            { "lesson.lessonId": lessonObjectId },
+          ],
+        },
+      );
+
+      if (!updatedUserCourse) {
+        throw new Error("Lesson not found in user curriculum");
+      }
+
+      let totalLessons = 0;
+      let completedLessons = 0;
+
+      updatedUserCourse.curriculum.forEach((chapter) => {
+        if (chapter.lessons && Array.isArray(chapter.lessons)) {
+          totalLessons += chapter.lessons.length;
+          completedLessons += chapter.lessons.filter(
+            (lesson) => lesson.status === "completed",
+          ).length;
+        }
+      });
+
+      const progression =
+        totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 100)
+          : 0;
+
+      await UserCourse.updateOne(
+        { _id: updatedUserCourse._id },
+        { $set: { progression: progression } },
+      );
+
+      return {
+        success: true,
+        progression,
+        message: "Cập nhật tiến độ thành công!",
+      };
+    } catch (error) {
+      console.error("❌ Error updateCourseProgression:", error);
+      throw error;
+    }
+  }
+
+  async getUserCourseCurriculum(req) {
+    try {
+      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const courseId = new mongoose.Types.ObjectId(req.params.courseId);
+
+      const userCourse = await UserCourse.findOne({ userId, courseId });
+
+      if (!userCourse) {
+        return {
+          progression: 0,
+          curriculum: [],
+          lastAccessedLessonId: null,
+        };
+      }
+
+      return {
+        progression: userCourse.progression || 0,
+        curriculum: userCourse.curriculum || [],
+        lastAccessedLessonId: userCourse.lastAccessedLessonId || null,
+      };
+    } catch (error) {
+      console.error("❌ Lỗi getUserCourseCurriculum:", error);
+      throw error;
     }
   }
 }

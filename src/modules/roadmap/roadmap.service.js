@@ -14,6 +14,20 @@ class roadmapService {
       );
     }
   }
+
+  async getRoadmap(req) {
+    try {
+      const roadmap = await Roadmap.findOne({ slug: req.params.slug }).populate(
+        "recommendedCourses",
+      );
+      return roadmap;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Lấy roadmaps thất bại",
+      );
+    }
+  }
 }
 
 export default new roadmapService();
