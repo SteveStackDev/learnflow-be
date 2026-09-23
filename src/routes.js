@@ -5,6 +5,7 @@ import chatRoute from "#modules/chat/chat.route.js";
 import courseRoute from "#modules/course/course.route.js";
 import roadmapRoute from "#modules/roadmap/roadmap.route.js";
 import badgeRoute from "#modules/badge/badge.route.js";
+import problemRoute from "#modules/problem/problem.route.js";
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use("/chat", chatRoute);
 router.use("/course", courseRoute);
 router.use("/roadmap", roadmapRoute);
 router.use("/badge", badgeRoute);
+router.use("/problem", problemRoute);
 
 export default router;

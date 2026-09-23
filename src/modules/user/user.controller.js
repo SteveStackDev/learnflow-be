@@ -190,3 +190,12 @@ export const deleteCourseNote = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const saveRoadmap = async (req, res) => {
+  try {
+    await userService.saveRoadmap(req);
+    return res.status(201).json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

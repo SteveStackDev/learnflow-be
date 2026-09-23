@@ -427,8 +427,7 @@ class UserService {
 
       return userCourse;
     } catch (error) {
-      console.error("❌ Error in saveCourse:", error);
-      throw error;
+      console.log(error.message);
     }
   }
 
@@ -502,8 +501,7 @@ class UserService {
         message: "Cập nhật tiến độ thành công!",
       };
     } catch (error) {
-      console.error("❌ Error updateCourseProgression:", error);
-      throw error;
+      console.log(error.message);
     }
   }
 
@@ -528,8 +526,22 @@ class UserService {
         lastAccessedLessonId: userCourse.lastAccessedLessonId || null,
       };
     } catch (error) {
-      console.error("❌ Lỗi getUserCourseCurriculum:", error);
-      throw error;
+      console.log(error.message);
+    }
+  }
+
+  async saveRoadmap(req) {
+    try {
+      await User.updateOne(
+        { _id: new mongoose.Types.ObjectId(req.session.passport.user.id) },
+        {
+          $addToSet: {
+            roadmaps: new mongoose.Types.ObjectId(req.body.roadmapId),
+          },
+        },
+      );
+    } catch (error) {
+      console.log(error.message);
     }
   }
 }

@@ -16,6 +16,7 @@ import {
   saveCourseNote,
   deleteCourseNote,
   saveCourse,
+  saveRoadmap,
 } from "#modules/user/user.controller.js";
 import { validatePassword } from "#modules/user/user.middleware.js";
 import notificationService from "#services/notification.service.js";
@@ -40,5 +41,6 @@ router.post("/course/save", saveCourse);
 router.post("/course/update-progression", updateCourseProgression);
 router.post("/course/note/save", saveCourseNote);
 router.post("/course/note/delete", deleteCourseNote);
+router.post("/roadmap/save", saveRoadmap);
 
 export default router;
