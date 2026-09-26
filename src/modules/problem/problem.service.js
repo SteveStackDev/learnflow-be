@@ -19,9 +19,8 @@ class problemService {
 
   async getProblem(req) {
     try {
-      const problem = await Problem.find({
-        _id: new mongoose.Types.ObjectId(req.params.id),
-      });
+      const id = req?.params?.id || req;
+      const problem = await Problem.findById(id);
       return problem;
     } catch (error) {
       throw new ApiError(
@@ -33,9 +32,8 @@ class problemService {
 
   async getUserProblems(req) {
     try {
-      const problems = await UserProblem.find({
-        _id: new mongoose.Types.ObjectId(req.session.passport.user.id),
-      });
+      const userId = req.session?.passport?.user?.id || req.session?.passport?.user?._id;
+      const problems = await UserProblem.find({ userId });
       return problems;
     } catch (error) {
       throw new ApiError(
@@ -47,11 +45,11 @@ class problemService {
 
   async saveProblem(req) {
     try {
-      await UserProblem.insertOne(req.body);
+      await UserProblem.create(req.body);
     } catch (error) {
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Lấy problems thất bại",
+        "Lưu problem thất bại",
       );
     }
   }
