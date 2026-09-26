@@ -3,6 +3,7 @@ import {
   getAllProblems,
   getUserProblems,
   getProblem,
+  saveProblem,
 } from "#modules/problem/problem.controller.js";
 
 const router = express.Router();
