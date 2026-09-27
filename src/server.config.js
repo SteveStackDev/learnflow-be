@@ -26,7 +26,6 @@ const connectServer = () => {
       origin: [
         "http://localhost:5173",
         "https://fyset-fe.onrender.com",
-        "https://fyset-fe.onrender.com/",
       ],
       credentials: true,
     }),
@@ -47,8 +46,8 @@ const connectServer = () => {
     resave: false,
     cookie: {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: process.env.IS_PRODUCTION,
+      sameSite: process.env.IS_PRODUCTION ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   });

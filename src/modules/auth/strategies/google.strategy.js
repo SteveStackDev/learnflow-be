@@ -11,7 +11,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_OAUTH_CLIENT_ID,
       clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_OAUTH_CALLBACK_URL,
+      callbackURL: process.env.GOOGLE_OAUTH_CALLBACK_URL_PRODUCTION,
       scope: ["profile", "email"],
     },
     async function (accessToken, refreshToken, profile, done) {
