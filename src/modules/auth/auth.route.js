@@ -55,9 +55,9 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    successRedirect: "http://localhost:5173",
+    successRedirect: "https://fyset-fe.onrender.com",
     successMessage: "Tiếp tục bằng Google thành công",
-    failureRedirect: "/api/v1/auth/",
+    failureRedirect: "https://fyset-fe.onrender.com",
     failureMessage: "Tiếp tục bằng Google thất bại",
     session: true,
   }),
