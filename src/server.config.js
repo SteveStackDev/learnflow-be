@@ -34,6 +34,8 @@ const connectServer = () => {
   // Middlewares For Data Type From Client
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
+  
+  app.set("trust proxy", 1)
 
   // Express Session
   const sessionMiddleware = session({
@@ -46,8 +48,8 @@ const connectServer = () => {
     resave: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.IS_PRODUCTION,
-      sameSite: process.env.IS_PRODUCTION ? "none" : "lax",
+      secure: process.env.IS_PRODUCTION === "true" ? true : false,
+      sameSite: process.env.IS_PRODUCTION === "true" ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     },
   });

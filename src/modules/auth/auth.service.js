@@ -21,14 +21,12 @@ export const checkUserAvailable = async (inputEmail, inputPassword, body) => {
 
   const compareEmailResult = user.email === inputEmail;
 
-  console.log("Compare Email Result:", compareEmailResult);
 
   const comparePasswordResult = await bcrypt.compare(
     inputPassword,
     user.password,
   );
 
-  console.log("Compare Password Result:", comparePasswordResult);
 
   if (!comparePasswordResult || !compareEmailResult) {
     return;
