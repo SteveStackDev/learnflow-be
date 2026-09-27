@@ -507,7 +507,7 @@ class UserService {
 
   async getUserCourseCurriculum(req) {
     try {
-      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const userId = new mongoose.Types.ObjectId(req.session.passport?.user?.id);
       const courseId = new mongoose.Types.ObjectId(req.params.courseId);
 
       const userCourse = await UserCourse.findOne({ userId, courseId });
