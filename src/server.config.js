@@ -35,7 +35,7 @@ const connectServer = () => {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
   
-  app.set("trust proxy", 1)
+  app.enable("trust proxy")
 
   // Express Session
   const sessionMiddleware = session({
