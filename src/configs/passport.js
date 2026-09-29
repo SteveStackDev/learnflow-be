@@ -7,7 +7,7 @@ import "#modules/auth/strategies/github.strategy.js";
 
 passport.serializeUser((user, done) => {
   console.log("Serializing User:", user);
-  done(null, user._id.toString());
+  done(null, { id: user._id });
 });
 
 passport.deserializeUser(async (id, done) => {

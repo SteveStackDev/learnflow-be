@@ -64,7 +64,15 @@ router.get(
   authGoogle,
 );
 
-router.get("/get-me", ensureAuth, async (req, res) => {
+router.get("/get-me", (req, res, next) => {
+    res.set({
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+      "Surrogate-Control": "no-store",
+    });
+    next();
+  }, ensureAuth, async (req, res) => {
   const user = await User.findById(
     new mongoose.Types.ObjectId(req.session.passport.user.id),
   );
