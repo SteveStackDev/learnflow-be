@@ -46,8 +46,8 @@ const connectServer = () => {
     secret: `${process.env.EXPRESS_SESSION_SECRET_KEY}`,
     saveUninitialized: false,
     resave: false,
+    proxy: true,
     cookie: {
-      httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
