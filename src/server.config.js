@@ -20,6 +20,8 @@ const PORT = process.env.PORT;
 const connectServer = () => {
   const io = getIO();
 
+  app.set("trust proxy", 1);
+
   // Middleware For Cors
   app.use(
     cors({
@@ -34,8 +36,7 @@ const connectServer = () => {
   // Middlewares For Data Type From Client
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
-  
-  app.set("trust proxy", 1);
+
 
   // Express Session
   const sessionMiddleware = session({
