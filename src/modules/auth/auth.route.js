@@ -57,7 +57,7 @@ router.get(
   passport.authenticate("google", {
     successRedirect: "https://fyset-fe.onrender.com",
     successMessage: "Tiếp tục bằng Google thành công",
-    failureRedirect: "https://fyset-fe.onrender.com",
+    failureRedirect: "https://fyset-fe.onrender.com/signin",
     failureMessage: "Tiếp tục bằng Google thất bại",
     session: true,
   }),
