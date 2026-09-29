@@ -35,7 +35,7 @@ const connectServer = () => {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
   
-  app.enable("trust proxy")
+  app.set("trust proxy", 1);
 
   // Express Session
   const sessionMiddleware = session({
@@ -46,7 +46,6 @@ const connectServer = () => {
     secret: `${process.env.EXPRESS_SESSION_SECRET_KEY}`,
     saveUninitialized: false,
     resave: false,
-    proxy: true,
     cookie: {
       httpOnly: true,
       secure: true,
