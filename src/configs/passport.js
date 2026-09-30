@@ -6,7 +6,6 @@ import "#modules/auth/strategies/google.strategy.js";
 import "#modules/auth/strategies/github.strategy.js";
 
 passport.serializeUser((user, done) => {
-  console.log("Serializing User:", user);
   done(null, { id: user._id });
 });
 
@@ -16,7 +15,6 @@ passport.deserializeUser(async (id, done) => {
 
     if (!user) return done(null, false);
 
-    console.log("Deserialized User:", user);
 
     done(null, user);
   } catch (error) {
