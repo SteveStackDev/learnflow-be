@@ -29,6 +29,7 @@ export const getUserProblems = async (req, res) => {
       data: problems,
     });
   } catch (error) {
+    console.log(error);
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       "Lấy problems thất bại",

@@ -33,6 +33,7 @@ export const getUserCourses = async (req, res) => {
       });
     }
   } catch (error) {
+    console.log(error);
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       "Lấy courses thất bại",
