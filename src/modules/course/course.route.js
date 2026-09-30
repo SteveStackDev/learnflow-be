@@ -8,10 +8,12 @@ import {
 
 const router = express.Router();
 
-// GET
+// Static routes đặt lên TRƯỚC
 router.get("/all", getAllCourses);
-router.get("/:id", getCourse);
+router.get("/user", getUserCourses); // <-- Đã chuyển lên trước /:id
+
+// Dynamic routes đặt SAU
 router.get("/curriculum/:courseId", getCurriculum);
-router.get("/user", getUserCourses);
+router.get("/:id", getCourse);
 
 export default router;

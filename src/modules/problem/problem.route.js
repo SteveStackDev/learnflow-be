@@ -8,10 +8,12 @@ import {
 
 const router = express.Router();
 
-// GET
+// GET - Static routes lên TRƯỚC
 router.get("/all", getAllProblems);
+router.get("/user", getUserProblems); // <-- Đã chuyển lên trước /:id
+
+// GET - Dynamic route đặt SAU
 router.get("/:id", getProblem);
-router.get("/user", getUserProblems);
 
 // POST
 router.post("/save", saveProblem);
