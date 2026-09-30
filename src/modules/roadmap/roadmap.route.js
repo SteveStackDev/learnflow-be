@@ -7,9 +7,11 @@ import {
 
 const router = express.Router();
 
-// GET
+// Static routes đặt TRƯỚC
 router.get("/all", getAllRoadmaps);
-router.get("/:slug", getRoadmap);
 router.get("/user", getUserRoadmaps);
+
+// Dynamic route đặt SAU
+router.get("/:slug", getRoadmap);
 
 export default router;
