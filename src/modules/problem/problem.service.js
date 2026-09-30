@@ -42,22 +42,11 @@ class problemService {
     }
   }
 
-  async getUserProblems(req) {
-    try {
-      const userId = req.session?.passport?.user?.id || req.session?.passport?.user?._id;
-      const problems = await UserProblem.find({ userId });
-      return problems;
-    } catch (error) {
-      throw new ApiError(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        "Lấy problems thất bại",
-      );
-    }
-  }
+
 
   async saveProblem(req) {
     try {
-      await UserProblem.create(req.body);
+      await userProblem.create(req.body);
     } catch (error) {
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
