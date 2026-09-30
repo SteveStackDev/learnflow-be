@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import Course from "#models/course.js";
 import mongoose from "mongoose";
 import Chapter from "#models/chapter.js";
-import userCourse from "#models/userCourse.js";ß
+import userCourse from "#models/userCourse.js";
 
 class courseService {
   async getAllCourses() {
