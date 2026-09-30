@@ -3,6 +3,7 @@ import {
   getAllCourses,
   getCourse,
   getCurriculum,
+  getUserCourses
 } from "#modules/course/course.controller.js";
 
 const router = express.Router();
@@ -11,5 +12,6 @@ const router = express.Router();
 router.get("/all", getAllCourses);
 router.get("/:id", getCourse);
 router.get("/curriculum/:courseId", getCurriculum);
+router.get("/user", getUserCourses);
 
 export default router;

@@ -21,6 +21,25 @@ export const getAllCourses = async (req, res) => {
   }
 };
 
+export const getUserCourses = async (req, res) => {
+  try {
+    const courses = await courseService.getUserCourses(req);
+
+    if (courses) {
+      res.status(StatusCodes.OK).send({
+        status: "success",
+        message: "Lấy course thành công",
+        data: courses,
+      });
+    }
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Lấy courses thất bại",
+    );
+  }
+};
+
 export const getCourse = async (req, res) => {
   try {
     const course = await courseService.getCourse(req);

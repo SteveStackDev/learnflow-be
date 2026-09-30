@@ -1,6 +1,7 @@
 import ApiError from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 import Roadmap from "#models/roadmap.js";
+import User from "#models/user.js";
 
 class roadmapService {
   async getAllRoadmaps() {
@@ -14,6 +15,19 @@ class roadmapService {
       );
     }
   }
+
+  async getUserRoadmaps(req) {
+    try {
+      const roadmaps = await User.find({ _id: new mongoose.Types.ObjectId(req.session.passport.user.id) }).populate("roadmaps");
+      return roadmaps;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Lấy roadmaps thất bại",
+      );
+    }
+  }
+
 
   async getRoadmap(req) {
     try {

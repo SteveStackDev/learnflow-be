@@ -3,11 +3,24 @@ import { StatusCodes } from "http-status-codes";
 import Course from "#models/course.js";
 import mongoose from "mongoose";
 import Chapter from "#models/chapter.js";
+import userCourse from "#models/userCourse.js";ß
 
 class courseService {
   async getAllCourses() {
     try {
       const courses = await Course.find();
+      return courses;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Lấy courses thất bại",
+      );
+    }
+  }
+
+  async getUserCourses(req) {
+    try {
+      const courses = await userCourse.find({ userId: new mongoose.Types.ObjectId(req.session.passport.user.id) }).populate("courseId");
       return courses;
     } catch (error) {
       throw new ApiError(

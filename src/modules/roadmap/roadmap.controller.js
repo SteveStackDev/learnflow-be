@@ -21,6 +21,26 @@ export const getAllRoadmaps = async (req, res) => {
   }
 };
 
+export const getUserRoadmaps = async (req, res) => {
+  try {
+    const roadmaps = await roadmapService.getUserRoadmaps(req);
+
+    if (roadmaps) {
+      res.status(StatusCodes.OK).send({
+        status: "success",
+        message: "Lấy roadmaps của người dùng thành công",
+        data: roadmaps,
+      });
+    }
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Lấy roadmaps của người dùng thất bại",
+    );
+  }
+};
+
+
 export const getRoadmap = async (req, res) => {
   try {
     const roadmap = await roadmapService.getRoadmap(req);
