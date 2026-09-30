@@ -4,7 +4,7 @@ export const updateAvatar = async (req, res) => {
   try {
     const avatarResult = await userService.changeAvatar(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Cập nhật ảnh đại diện thành công",
       data: avatarResult,
@@ -17,19 +17,14 @@ export const updateAvatar = async (req, res) => {
   }
 };
 
-// User A gửi lời mời kết bạn
-// User B nhận thông báo có lời mới kết bạn
-// User B chấp nhận
-// User A add một bạn mới vào list
-// User B add một bạn mới vào list
-// Thêm một event nhận notification của từng user
 export const addNewFriend = async (req, res) => {
   try {
-    await userService.addNewFriend(req);
+    const result = await userService.addNewFriend(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: "Kết bạn thành công",
+      message: "Gửi lời mời kết bạn thành công",
+      data: result,
     });
   } catch (err) {
     return res.status(500).json({
@@ -41,11 +36,12 @@ export const addNewFriend = async (req, res) => {
 
 export const replyNewFriend = async (req, res) => {
   try {
-    await userService.replyNewFriend(req);
+    const result = await userService.replyNewFriend(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: "Kết bạn thành công",
+      message: "Phản hồi kết bạn thành công",
+      data: result,
     });
   } catch (err) {
     return res.status(500).json({
@@ -57,11 +53,12 @@ export const replyNewFriend = async (req, res) => {
 
 export const getAllFriend = async (req, res) => {
   try {
-    await userService.getAllFriend(req);
+    const friends = await userService.getAllFriend(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Lấy danh sách bạn bè thành công",
+      data: friends, // FIX: Đã trả data danh sách bạn bè
     });
   } catch (err) {
     return res.status(500).json({
@@ -73,10 +70,12 @@ export const getAllFriend = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    await userService.forgotPassword(req);
+    const token = await userService.forgotPassword(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
+      message: "Mã OTP đã được gửi về email",
+      token, // FIX: Trả về token cho FE
     });
   } catch (err) {
     return res.status(500).json({
@@ -88,10 +87,11 @@ export const forgotPassword = async (req, res) => {
 
 export const verifyOTP = async (req, res) => {
   try {
-    await userService.verifyOTP(req);
+    const isValid = await userService.verifyOTP(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
+      data: isValid,
     });
   } catch (err) {
     return res.status(500).json({
@@ -103,10 +103,12 @@ export const verifyOTP = async (req, res) => {
 
 export const changePassword = async (req, res) => {
   try {
-    await userService.changePassword(req);
+    const result = await userService.changePassword(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
+      message: "Đổi mật khẩu thành công",
+      data: result,
     });
   } catch (err) {
     return res.status(500).json({
@@ -118,10 +120,12 @@ export const changePassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    await userService.resetPassword(req);
+    const result = await userService.resetPassword(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
+      message: "Cập nhật mật khẩu thành công",
+      data: result,
     });
   } catch (err) {
     return res.status(500).json({
@@ -133,10 +137,12 @@ export const resetPassword = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
   try {
-    await userService.verifyEmail(req);
+    const result = await userService.verifyEmail(req);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
+      message: "Xác thực email thành công",
+      data: result,
     });
   } catch (err) {
     return res.status(500).json({
@@ -149,8 +155,7 @@ export const verifyEmail = async (req, res) => {
 export const saveCourse = async (req, res) => {
   try {
     const data = await userService.saveCourse(req);
-    console.log(data)
-    return res.status(201).json({ success: true, data });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -159,7 +164,7 @@ export const saveCourse = async (req, res) => {
 export const updateCourseProgression = async (req, res) => {
   try {
     const data = await userService.updateCourseProgression(req);
-    return res.status(201).json({ success: true, data });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -168,7 +173,7 @@ export const updateCourseProgression = async (req, res) => {
 export const getUserCourseCurriculum = async (req, res) => {
   try {
     const data = await userService.getUserCourseCurriculum(req);
-    return res.status(201).json({ success: true, data });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -177,7 +182,7 @@ export const getUserCourseCurriculum = async (req, res) => {
 export const saveCourseNote = async (req, res) => {
   try {
     const data = await userService.saveCourseNote(req);
-    return res.status(201).json({ success: true, data });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -186,7 +191,7 @@ export const saveCourseNote = async (req, res) => {
 export const deleteCourseNote = async (req, res) => {
   try {
     const data = await userService.deleteCourseNote(req);
-    return res.status(201).json({ success: true, data });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -194,8 +199,8 @@ export const deleteCourseNote = async (req, res) => {
 
 export const saveRoadmap = async (req, res) => {
   try {
-    await userService.saveRoadmap(req);
-    return res.status(201).json({ success: true });
+    const result = await userService.saveRoadmap(req);
+    return res.status(200).json({ success: true, data: result });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

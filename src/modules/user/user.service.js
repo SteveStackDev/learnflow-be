@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import jwtService from "#services/jwt.service.js";
 import mailService from "#services/mail.service.js";
 import UserCourse from "#models/userCourse.js";
+import Chapter from "#models/chapter.js";
 
 const saltRounds = 10;
 
@@ -22,21 +23,22 @@ class UserService {
         );
       }
 
-      const userId = req.session.passport.user.id;
+      const userId = req.session?.passport?.user?.id;
+      if (!userId) throw new Error("Chưa đăng nhập");
 
-      const userNewAvatar = await User.findById(
-        new mongoose.Types.ObjectId(userId),
-      ).updateOne({
-        avatar: { url: uploadedFile.url, urlId: uploadedFile.url_id },
-      });
-
-      if (!userNewAvatar) {
-        return;
+      if (!uploadedFile) {
+        throw new Error("File tải lên không hợp lệ");
       }
+
+      const userNewAvatar = await User.findByIdAndUpdate(
+        new mongoose.Types.ObjectId(userId),
+        { avatar: { url: uploadedFile.url, urlId: uploadedFile.url_id } },
+        { new: true }
+      );
 
       return userNewAvatar;
     } catch (error) {
-      if (uploadedFile.url_id) {
+      if (uploadedFile?.url_id) {
         await uploadService.deleteFile(uploadedFile.url_id, "image");
       }
       throw error;
@@ -45,39 +47,37 @@ class UserService {
 
   async addNewFriend(req) {
     try {
+      const currentUserId = req.session?.passport?.user?.id;
+      const receiverId = req.body?.receiverId;
+
+      if (!currentUserId || !receiverId) {
+        throw new Error("Thiếu thông tin người dùng");
+      }
+
       const [receiverUpdate, senderUpdate] = await Promise.all([
-        // Người được add
         User.updateOne(
           {
-            _id: new mongoose.Types.ObjectId(req.body.receiverId),
-            "friends.userId": {
-              $ne: new mongoose.Types.ObjectId(req.session.passport.user.id),
-            },
+            _id: new mongoose.Types.ObjectId(receiverId),
+            "friends.userId": { $ne: new mongoose.Types.ObjectId(currentUserId) },
           },
           {
             $addToSet: {
               friends: {
-                userId: new mongoose.Types.ObjectId(
-                  req.session.passport.user.id,
-                ),
+                userId: new mongoose.Types.ObjectId(currentUserId),
                 status: "pending",
               },
             },
           },
         ),
-
-        // Người add
         User.updateOne(
           {
-            _id: new mongoose.Types.ObjectId(req.session.passport.user.id),
-            "friends.userId": {
-              $ne: new mongoose.Types.ObjectId(req.body.receiverId),
-            },
+            _id: new mongoose.Types.ObjectId(currentUserId),
+            "friends.userId": { $ne: new mongoose.Types.ObjectId(receiverId) },
           },
           {
             $addToSet: {
               friends: {
-                userId: new mongoose.Types.ObjectId(req.body.receiverId),
+                userId: new mongoose.Types.ObjectId(receiverId),
                 status: "pending",
               },
             },
@@ -85,184 +85,166 @@ class UserService {
         ),
       ]);
 
-      if (
-        receiverUpdate.modifiedCount === 1 &&
-        senderUpdate.modifiedCount === 1
-      ) {
-        return { receiverUpdate, senderUpdate };
-      }
+      return { receiverUpdate, senderUpdate };
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi addNewFriend:", error.message);
+      throw error;
     }
   }
 
   async replyNewFriend(req) {
     try {
-      const [receiverUpdate, senderUpdate] = await Promise.all([
-        // Người được reply
-        User.updateOne(
-          {
-            _id: new mongoose.Types.ObjectId(req.body.receiverId),
-            "friends.userId": new mongoose.Types.ObjectId(
-              req.session.passport.user.id,
-            ),
-          },
-          {
-            $set: {
-              "friends.$.status": req.body.status,
-            },
-          },
-        ),
+      const currentUserId = req.session?.passport?.user?.id;
+      const receiverId = req.body?.receiverId;
 
-        // Người reply
+      const [receiverUpdate, senderUpdate] = await Promise.all([
         User.updateOne(
           {
-            _id: new mongoose.Types.ObjectId(req.session.passport.user.id),
-            "friends.userId": new mongoose.Types.ObjectId(req.body.receiverId),
+            _id: new mongoose.Types.ObjectId(receiverId),
+            "friends.userId": new mongoose.Types.ObjectId(currentUserId),
           },
+          { $set: { "friends.$.status": req.body.status } },
+        ),
+        User.updateOne(
           {
-            $set: {
-              "friends.$.status": req.body.status,
-            },
+            _id: new mongoose.Types.ObjectId(currentUserId),
+            "friends.userId": new mongoose.Types.ObjectId(receiverId),
           },
+          { $set: { "friends.$.status": req.body.status } },
         ),
       ]);
 
-      if (
-        receiverUpdate.modifiedCount === 1 &&
-        senderUpdate.modifiedCount === 1
-      ) {
-        return { receiverUpdate, senderUpdate };
-      }
+      return { receiverUpdate, senderUpdate };
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi replyNewFriend:", error.message);
+      throw error;
     }
   }
 
   async getAllFriend(req) {
     try {
+      const currentUserId = req.session?.passport?.user?.id;
       const friendsList = await User.findOne(
-        {
-          _id: new mongoose.Types.ObjectId(req.session.passport.user.id),
-        },
-        {
-          friends: 1,
-          _id: 0,
-        },
+        { _id: new mongoose.Types.ObjectId(currentUserId) },
+        { friends: 1, _id: 0 },
       );
 
-      if (friendsList) {
-        return friendsList;
-      }
+      return friendsList?.friends || [];
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi getAllFriend:", error.message);
+      throw error;
     }
   }
 
   async forgotPassword(req) {
     try {
       const user = await User.findOne({ email: req.body.email });
-      if (user) {
-        const token = jwtService.generateJWT({
-          iđ: user._id,
+      if (!user) {
+        throw new Error("Email không tồn tại trong hệ thống");
+      }
+
+      // FIX: Sửa lỗi gõ dấu "iđ" -> "id"
+      const token = jwtService.generateJWT({ id: user._id });
+
+      if (token) {
+        await mailService.sendMail(user.email, "Mã OTP Quên Mật Khẩu", "otp.page.hbs", {
+          userName: user.username,
+          otpCode: await otpService.generateOTP(user.email),
+          expiryMinutes: "3",
         });
 
-        if (token) {
-          await mailService.sendMail(user.email, "Mã OTP", "otp.page.hbs", {
-            userName: user.username,
-            otpCode: await otpService.generateOTP(user.email),
-            expiryMinutes: "3",
-          });
-
-          return token;
-        }
+        return token;
       }
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi forgotPassword:", error.message);
+      throw error;
     }
   }
 
   async verifyOTP(req) {
     try {
       const data = await jwtService.validateJWT(req);
+      if (!data?.id) throw new Error("Token không hợp lệ");
+
       const user = await User.findById(new mongoose.Types.ObjectId(data.id));
 
       if (user) {
         return await otpService.validateOTP(user.email, req.body.otp);
       }
+      throw new Error("Người dùng không tồn tại");
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi verifyOTP:", error.message);
+      throw error;
     }
   }
 
   async changePassword(req) {
     try {
       const data = await jwtService.validateJWT(req);
-      const user = await User.findById(new mongoose.Types.ObjectId(data.id));
+      if (!data?.id) throw new Error("Token không hợp lệ");
 
-      const comparePasswordResult = await bcrypt.compare(
-        req.body.password,
-        user.password,
+      const user = await User.findById(new mongoose.Types.ObjectId(data.id));
+      if (!user) throw new Error("Người dùng không tồn tại");
+
+      // FIX: Lấy newPassword chuẩn từ req.body
+      const newPassword = req.body.newPassword || req.body.password;
+      if (!newPassword) throw new Error("Mật khẩu mới không được để trống");
+
+      const hashed_password = await bcrypt.hash(newPassword, saltRounds);
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { password: hashed_password } }
       );
 
-      if (user && comparePasswordResult) {
-        const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
-        await User.updateOne(
-          { email: req.body.email },
-          {
-            $set: {
-              password: hashed_password,
-            },
-          },
-        );
-      }
-
-      return;
+      return { success: true, message: "Đổi mật khẩu thành công" };
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi changePassword:", error.message);
+      throw error;
     }
   }
 
   async resetPassword(req) {
-    const user = await User.findById(
-      new mongoose.Types.ObjectId(req.session.passport.user.id),
-    );
+    try {
+      const userId = req.session?.passport?.user?.id;
+      const user = await User.findById(new mongoose.Types.ObjectId(userId));
 
-    const comparePasswordResult = await bcrypt.compare(
-      req.body.oldPassword,
-      user.password,
-    );
+      if (!user) throw new Error("Người dùng không tồn tại");
 
-    if (user && comparePasswordResult) {
-      const hashed_password = await bcrypt.hash(
-        req.body.newPassword,
-        saltRounds,
+      const comparePasswordResult = await bcrypt.compare(
+        req.body.oldPassword,
+        user.password,
       );
+
+      if (!comparePasswordResult) {
+        throw new Error("Mật khẩu cũ không chính xác");
+      }
+
+      const hashed_password = await bcrypt.hash(req.body.newPassword, saltRounds);
       await User.updateOne(
-        { _id: new mongoose.Types.ObjectId(req.session.passport.user.id) },
-        {
-          $set: {
-            password: hashed_password,
-          },
-        },
+        { _id: user._id },
+        { $set: { password: hashed_password } }
       );
+
+      return { success: true, message: "Cập nhật mật khẩu thành công" };
+    } catch (error) {
+      console.error("Lỗi resetPassword:", error.message);
+      throw error;
     }
   }
 
   async verifyEmail(req) {
-    const data = await jwtService.validateJWT(req);
-
-    if (data) {
-      await User.updateOne(
-        { _id: new mongoose.Types.ObjectId(data.id) },
-        {
-          $set: {
-            accountStatus: "active",
-          },
-        },
-      );
-
-      return;
+    try {
+      const data = await jwtService.validateJWT(req);
+      if (data?.id) {
+        await User.updateOne(
+          { _id: new mongoose.Types.ObjectId(data.id) },
+          { $set: { accountStatus: "active" } },
+        );
+        return { success: true };
+      }
+    } catch (error) {
+      console.error("Lỗi verifyEmail:", error.message);
+      throw error;
     }
   }
 
@@ -309,10 +291,7 @@ class UserService {
       }
     }
 
-    return {
-      success: true,
-      notes: remainingNotes,
-    };
+    return { success: true, notes: remainingNotes };
   }
 
   async saveCourseNote(req) {
@@ -367,15 +346,12 @@ class UserService {
       const courseId = new mongoose.Types.ObjectId(req.body.courseId);
 
       let userCourse = await UserCourse.findOne({ userId, courseId });
-
       if (userCourse) {
         return userCourse;
       }
 
       const curriculum = await Chapter.aggregate([
-        {
-          $match: { courseId: courseId },
-        },
+        { $match: { courseId: courseId } },
         {
           $lookup: {
             from: "lessons",
@@ -427,7 +403,8 @@ class UserService {
 
       return userCourse;
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi saveCourse:", error.message);
+      throw error;
     }
   }
 
@@ -435,16 +412,11 @@ class UserService {
     try {
       const lessonIdStr = req.body.lessonId || req.body.id;
       if (!lessonIdStr) {
-        throw new Error("Missing lessonId in request body");
+        throw new Error("Thiếu lessonId trong body");
       }
 
       const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
       const lessonObjectId = new mongoose.Types.ObjectId(lessonIdStr);
-
-      const userCourse = await UserCourse.findOne({ userId });
-      if (!userCourse) {
-        throw new Error("User course not found");
-      }
 
       const updatedUserCourse = await UserCourse.findOneAndUpdate(
         {
@@ -455,8 +427,7 @@ class UserService {
           $set: {
             "curriculum.$[chapter].lessons.$[lesson].status": "completed",
             "curriculum.$[chapter].lessons.$[lesson].progression": 100,
-            "curriculum.$[chapter].lessons.$[lesson].lastAccessedAt":
-              new Date(),
+            "curriculum.$[chapter].lessons.$[lesson].lastAccessedAt": new Date(),
             lastAccessedLessonId: lessonObjectId,
           },
         },
@@ -470,7 +441,7 @@ class UserService {
       );
 
       if (!updatedUserCourse) {
-        throw new Error("Lesson not found in user curriculum");
+        throw new Error("Không tìm thấy bài học trong chương trình của người dùng");
       }
 
       let totalLessons = 0;
@@ -501,7 +472,8 @@ class UserService {
         message: "Cập nhật tiến độ thành công!",
       };
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi updateCourseProgression:", error.message);
+      throw error;
     }
   }
 
@@ -526,22 +498,25 @@ class UserService {
         lastAccessedLessonId: userCourse.lastAccessedLessonId || null,
       };
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi getUserCourseCurriculum:", error.message);
+      throw error;
     }
   }
 
   async saveRoadmap(req) {
     try {
-      await User.updateOne(
-        { _id: new mongoose.Types.ObjectId(req.session.passport.user.id) },
-        {
-          $addToSet: {
-            roadmaps: new mongoose.Types.ObjectId(req.body.roadmapId),
-          },
-        },
+      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const roadmapId = new mongoose.Types.ObjectId(req.body.roadmapId);
+
+      const result = await User.updateOne(
+        { _id: userId },
+        { $addToSet: { roadmaps: roadmapId } },
       );
+
+      return result;
     } catch (error) {
-      console.log(error.message);
+      console.error("Lỗi saveRoadmap:", error.message);
+      throw error;
     }
   }
 }
