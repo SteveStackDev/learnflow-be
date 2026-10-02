@@ -40,7 +40,6 @@ export const getUserRoadmaps = async (req, res) => {
   }
 };
 
-
 export const getRoadmap = async (req, res) => {
   try {
     const roadmap = await roadmapService.getRoadmap(req);
@@ -56,6 +55,38 @@ export const getRoadmap = async (req, res) => {
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       "Lấy roadmap thất bại",
+    );
+  }
+};
+
+export const createRoadmap = async (req, res) => {
+  try {
+    const roadmap = await roadmapService.createRoadmap(req);
+    res.status(StatusCodes.CREATED).send({
+      status: "success",
+      message: "Tạo roadmap thành công",
+      data: roadmap,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Tạo roadmap thất bại",
+    );
+  }
+};
+
+export const deleteRoadmap = async (req, res) => {
+  try {
+    const result = await roadmapService.deleteRoadmap(req);
+    res.status(StatusCodes.OK).send({
+      status: "success",
+      message: "Xóa roadmap thành công",
+      data: result,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Xóa roadmap thất bại",
     );
   }
 };

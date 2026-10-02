@@ -2,7 +2,7 @@ import ApiError from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 import Roadmap from "#models/roadmap.js";
 import User from "#models/user.js";
-import mongoose from "mongoose"; // <-- Đã bổ sung import mongoose
+import mongoose from "mongoose";
 
 class roadmapService {
   async getAllRoadmaps() {
@@ -43,6 +43,32 @@ class roadmapService {
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Lấy roadmap thất bại",
+      );
+    }
+  }
+
+  async createRoadmap(req) {
+    try {
+      const newRoadmap = new Roadmap(req.body);
+      await newRoadmap.save();
+      return newRoadmap;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Tạo roadmap thất bại",
+      );
+    }
+  }
+
+  async deleteRoadmap(req) {
+    try {
+      const roadmapId = new mongoose.Types.ObjectId(req.params.id);
+      await Roadmap.findByIdAndDelete(roadmapId);
+      return { message: "Roadmap deleted successfully" };
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Xóa roadmap thất bại",
       );
     }
   }

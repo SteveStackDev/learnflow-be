@@ -1,9 +1,9 @@
 import ApiError from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 import Course from "#models/course.js";
-import mongoose from "mongoose";
 import Chapter from "#models/chapter.js";
 import userCourse from "#models/userCourse.js";
+import mongoose from "mongoose";
 
 class courseService {
   async getAllCourses() {
@@ -99,6 +99,34 @@ class courseService {
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Lấy curriculum thất bại",
+      );
+    }
+  }
+
+  async deleteCourse(req) {
+    try {
+      const courseId = new mongoose.Types.ObjectId(req.params.id);
+      await Course.findByIdAndDelete(courseId);
+      await Chapter.deleteMany({ courseId });
+      await userCourse.deleteMany({ courseId });
+      return { message: "Course deleted successfully" };
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Xóa course thất bại",
+      );
+    }
+  }
+
+  async createCourse(req) {
+    try {
+      const newCourse = new Course(req.body);
+      await newCourse.save();
+      return newCourse;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Tạo course thất bại",
       );
     }
   }

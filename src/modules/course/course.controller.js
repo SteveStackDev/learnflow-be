@@ -79,3 +79,35 @@ export const getCurriculum = async (req, res) => {
     );
   }
 };
+
+export const deleteCourse = async (req, res) => {
+  try {
+    const result = await courseService.deleteCourse(req);
+    res.status(StatusCodes.OK).send({
+      status: "success",
+      message: "Xóa course thành công",
+      data: result,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Xóa course thất bại",
+    );
+  }
+};
+
+export const createCourse = async (req, res) => {
+  try {
+    const result = await courseService.createCourse(req);
+    res.status(StatusCodes.CREATED).send({
+      status: "success",
+      message: "Tạo course thành công",
+      data: result,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Tạo course thất bại",
+    );
+  }
+};
