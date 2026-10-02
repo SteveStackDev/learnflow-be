@@ -39,7 +39,6 @@ export const getUserProblems = async (req, res) => {
 
 export const getProblem = async (req, res) => {
   try {
-    // ✅ TRUYỀN req VÀO ĐÂY:
     const problem = await problemService.getProblem(req);
 
     if (!problem) {
@@ -62,19 +61,19 @@ export const getProblem = async (req, res) => {
   }
 };
 
-
 export const saveProblem = async (req, res) => {
   try {
-    await problemService.saveProblem(req);
+    const result = await problemService.saveProblem(req);
 
     return res.status(StatusCodes.OK).send({
       status: "success",
       message: "Lưu problem thành công",
+      data: result,
     });
   } catch (error) {
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
-      "Lấy problems thất bại",
+      "Lưu problem thất bại",
     );
   }
 };

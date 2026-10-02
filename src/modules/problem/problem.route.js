@@ -10,12 +10,12 @@ const router = express.Router();
 
 // GET - Static routes lên TRƯỚC
 router.get("/all", getAllProblems);
-router.get("/user", getUserProblems); // <-- Đã chuyển lên trước /:id
+router.get("/user", getUserProblems);
 
 // GET - Dynamic route đặt SAU
 router.get("/:id", getProblem);
 
-// POST
+// POST - Lưu bài làm
 router.post("/save", saveProblem);
 
 export default router;

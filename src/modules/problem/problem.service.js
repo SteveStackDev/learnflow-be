@@ -1,35 +1,97 @@
-export const adaptUserProblem = (item) => {
-  if (!item) return null;
+import ApiError from "#utils/ApiError.js";
+import { StatusCodes } from "http-status-codes";
+import Problem from "#models/problem.js";
+import userProblem from "#models/userProblem.js";
+import User from "#models/user.js";
+import mongoose from "mongoose";
 
-  const problemDetail = item.problemId ? adaptProblem(item.problemId) : adaptProblem(item);
-
-  const rawStatus = String(item.status || "").toUpperCase();
-  let userStatus = "unsolved";
-  if (["SOLVED", "AC", "ACCEPTED"].includes(rawStatus) || (item.score != null && item.maxScore != null && item.score === item.maxScore && item.maxScore > 0)) {
-    userStatus = "solved";
-  } else if (["ATTEMPTED", "WA", "WRONG", "TLE", "RE", "CE", "IN_PROGRESS"].includes(rawStatus) || (item.score > 0 && item.score < item.maxScore)) {
-    userStatus = "attempted";
+class problemService {
+  async getAllProblems() {
+    try {
+      const problems = await Problem.find();
+      return problems;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Lấy problems thất bại",
+      );
+    }
   }
 
-  return {
-    id: item._id?.toString() || item.id,
-    _id: item._id || item.id,
-    userStatus,
-    status: rawStatus,
-    score: item.score || 0,
-    maxScore: item.maxScore || 100,
-    createdAt: item.createdAt,
-    problemId: problemDetail || {
-      _id: item.problemId?._id || item.id,
-      title: "Bài tập thuật toán",
-      code: "---",
-      difficulty: "easy",
-      topic: "General",
-    },
-    code: problemDetail?.code || "---",
-    title: problemDetail?.title || "Chưa có tên bài tập",
-    difficulty: problemDetail?.difficulty || "easy",
-    topic: problemDetail?.topic || "",
-    acceptanceRate: problemDetail?.acceptanceRate || 0,
-  };
-};
+  async getUserProblems(req) {
+    try {
+      const userId =
+        req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+      if (!userId) return [];
+
+      const problems = await userProblem
+        .find({ userId: new mongoose.Types.ObjectId(userId) })
+        .populate("problemId")
+        .sort({ createdAt: -1 });
+
+      return problems;
+    } catch (error) {
+      console.log(error);
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Lấy problems thất bại",
+      );
+    }
+  }
+
+  async getProblem(req) {
+    try {
+      const id = req?.params?.id || req;
+      const problem = await Problem.findById(id);
+      return problem;
+    } catch (error) {
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Lấy problem thất bại",
+      );
+    }
+  }
+
+  async saveProblem(req) {
+    try {
+      const userId =
+        req.body?.userId ||
+        req.session?.passport?.user?.id ||
+        req.user?._id ||
+        req.user?.id;
+
+      if (!userId) {
+        throw new ApiError(
+          StatusCodes.UNAUTHORIZED,
+          "Người dùng chưa đăng nhập",
+        );
+      }
+
+      const problemId = req.body?.problemId;
+
+      // 1. Tạo bản ghi kết quả nộp bài trong UserProblem
+      const newSubmission = await userProblem.create({
+        ...req.body,
+        userId: new mongoose.Types.ObjectId(userId),
+        problemId: new mongoose.Types.ObjectId(problemId),
+      });
+
+      // 2. Push problemId vào mảng problems của User (không trùng lặp)
+      if (problemId) {
+        await User.findByIdAndUpdate(userId, {
+          $addToSet: { problems: new mongoose.Types.ObjectId(problemId) },
+        });
+      }
+
+      return newSubmission;
+    } catch (error) {
+      console.error("Lỗi khi saveProblem:", error);
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        `Lưu problem thất bại: ${error.message}`,
+      );
+    }
+  }
+}
+
+export default new problemService();
