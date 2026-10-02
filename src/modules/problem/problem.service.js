@@ -69,14 +69,70 @@ class problemService {
 
       const problemId = req.body?.problemId;
 
-      // 1. Tạo bản ghi kết quả nộp bài trong UserProblem
+      // Chuẩn hóa mảng testResults đảm bảo đúng testResultSchema (có order)
+      const formattedTestResults = Array.isArray(req.body?.testResults)
+        ? req.body.testResults.map((t, index) => ({
+          order: Number(t.order ?? t.id ?? index + 1),
+          label: String(t.label || `Test #${index + 1}`),
+          status: String(t.status || "WA"),
+          score: Number(t.score ?? 0),
+          maxScore: Number(t.maxScore ?? t.max_score ?? 10),
+          time: Number(t.time ?? t.executionTime ?? 0),
+          runtime: String(t.runtime ?? `${t.time || 0}ms`),
+          memory: String(t.memory ?? "0KB"),
+          input: String(t.input || ""),
+          stdout: String(t.stdout || ""),
+          stderr: String(t.stderr || ""),
+          expected: String(t.expected || ""),
+          is_hidden: Boolean(t.is_hidden ?? t.isHidden ?? false),
+          subtask_id: Number(t.subtask_id ?? t.subtaskId ?? 1),
+          subtask_name: String(t.subtask_name ?? t.subtaskName ?? "Subtask 1"),
+        }))
+        : [];
+
+      // Chuẩn hóa mảng subtasksResult đảm bảo đúng subtaskResultSchema (có order)
+      const formattedSubtasksResult = Array.isArray(req.body?.subtasksResult)
+        ? req.body.subtasksResult.map((st, index) => ({
+          order: String(st.order ?? st.id ?? index + 1),
+          title: String(st.title ?? st.name ?? `Subtask ${index + 1}`),
+          label: String(st.label ?? `Subtask #${index + 1}`),
+          status: String(st.status || "WA"),
+          earnedScore: Number(st.earnedScore ?? st.score ?? 0),
+          maxScore: Number(st.maxScore ?? st.max_score ?? 100),
+          maxTime: String(st.maxTime ?? "0ms"),
+          maxMemory: String(st.maxMemory ?? "0KB"),
+          tests: Array.isArray(st.tests)
+            ? st.tests.map((t, tIdx) => ({
+              order: Number(t.order ?? t.id ?? tIdx + 1),
+              label: String(t.label || `Test #${tIdx + 1}`),
+              status: String(t.status || "WA"),
+              score: Number(t.score ?? 0),
+              maxScore: Number(t.maxScore ?? t.max_score ?? 10),
+              time: Number(t.time ?? 0),
+              runtime: String(t.runtime ?? `${t.time || 0}ms`),
+              memory: String(t.memory ?? "0KB"),
+              input: String(t.input || ""),
+              stdout: String(t.stdout || ""),
+              stderr: String(t.stderr || ""),
+              expected: String(t.expected || ""),
+              is_hidden: Boolean(t.is_hidden ?? false),
+              subtask_id: Number(t.subtask_id ?? index + 1),
+              subtask_name: String(t.subtask_name ?? `Subtask ${index + 1}`),
+            }))
+            : [],
+        }))
+        : [];
+
+      // 1. Tạo bản ghi trong UserProblem với dữ liệu đã format chuẩn
       const newSubmission = await userProblem.create({
         ...req.body,
         userId: new mongoose.Types.ObjectId(userId),
         problemId: new mongoose.Types.ObjectId(problemId),
+        testResults: formattedTestResults,
+        subtasksResult: formattedSubtasksResult,
       });
 
-      // 2. Push problemId vào mảng problems của User (không trùng lặp)
+      // 2. Thêm problemId vào mảng problems của User (không trùng lặp)
       if (problemId) {
         await User.findByIdAndUpdate(userId, {
           $addToSet: { problems: new mongoose.Types.ObjectId(problemId) },
