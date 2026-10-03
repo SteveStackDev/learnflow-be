@@ -3,6 +3,7 @@ import Problem from "#models/problem.js";
 
 export const initialProblemsData = [
   {
+    _id: "01",
     title: "A+B",
     statement: "Cho 2 số nguyên A, B. Tính tổng của chúng!",
     imageDescription: "",
@@ -66,6 +67,7 @@ export const initialProblemsData = [
     ],
   },
   {
+    _id: "02",
     title: "Đường đi ngắn nhất",
     statement:
       "Cho đồ thị vô hướng gồm n đỉnh và m cạnh. Tìm đường đi ngắn nhất từ 1 đến các đỉnh từ 2 đến n",
@@ -147,6 +149,7 @@ export const initialProblemsData = [
     ],
   },
   {
+    _id: "03",
     title: "Tổng tiền tố",
     statement:
       "Cho mảng A gồm n số nguyên và q truy vấn có dạng (l,r), tính tổng Al+Al+1+…+Ar.",

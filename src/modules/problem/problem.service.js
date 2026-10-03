@@ -11,6 +11,7 @@ class problemService {
       const problems = await Problem.find();
       return problems;
     } catch (error) {
+      console.error("Lỗi getAllProblems:", error);
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Lấy problems thất bại",
@@ -21,17 +22,24 @@ class problemService {
   async getUserProblems(req) {
     try {
       const userId =
-        req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+        req.session?.passport?.user?.id ||
+        req.session?.passport?.user?._id ||
+        req.user?._id ||
+        req.user?.id;
       if (!userId) return [];
 
+      const query = mongoose.isValidObjectId(userId)
+        ? { $or: [{ userId: new mongoose.Types.ObjectId(userId) }, { userId: String(userId) }] }
+        : { userId };
+
       const problems = await userProblem
-        .find({ userId: new mongoose.Types.ObjectId(userId) })
+        .find(query)
         .populate("problemId")
         .sort({ createdAt: -1 });
 
       return problems;
     } catch (error) {
-      console.log(error);
+      console.error("Lỗi getUserProblems:", error);
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Lấy problems thất bại",
@@ -42,9 +50,21 @@ class problemService {
   async getProblem(req) {
     try {
       const id = req?.params?.id || req;
-      const problem = await Problem.findById(id);
+      let problem = null;
+
+      if (mongoose.isValidObjectId(id)) {
+        problem = await Problem.findById(id);
+      }
+
+      if (!problem) {
+        problem = await Problem.findOne({
+          $or: [{ _id: id }, { code: id }, { title: id }],
+        });
+      }
+
       return problem;
     } catch (error) {
+      console.error(`Lỗi getProblem (id: ${req?.params?.id || req}):`, error);
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         "Lấy problem thất bại",
@@ -57,15 +77,9 @@ class problemService {
       const userId =
         req.body?.userId ||
         req.session?.passport?.user?.id ||
+        req.session?.passport?.user?._id ||
         req.user?._id ||
         req.user?.id;
-
-      if (!userId) {
-        throw new ApiError(
-          StatusCodes.UNAUTHORIZED,
-          "Người dùng chưa đăng nhập",
-        );
-      }
 
       const problemId = req.body?.problemId;
 
@@ -85,7 +99,7 @@ class problemService {
           stderr: String(t.stderr || ""),
           expected: String(t.expected || ""),
           is_hidden: Boolean(t.is_hidden ?? t.isHidden ?? false),
-          subtask_id: Number(t.subtask_id ?? t.subtaskId ?? 1),
+          subtask_id: t.subtask_id ?? t.subtaskId ?? index + 1,
           subtask_name: String(t.subtask_name ?? t.subtaskName ?? "Subtask 1"),
         }))
         : [];
@@ -116,24 +130,32 @@ class problemService {
               stderr: String(t.stderr || ""),
               expected: String(t.expected || ""),
               is_hidden: Boolean(t.is_hidden ?? false),
-              subtask_id: Number(t.subtask_id ?? index + 1),
+              subtask_id: t.subtask_id ?? index + 1,
               subtask_name: String(t.subtask_name ?? `Subtask ${index + 1}`),
             }))
             : [],
         }))
         : [];
 
+      const safeProblemId = mongoose.isValidObjectId(problemId)
+        ? new mongoose.Types.ObjectId(problemId)
+        : problemId;
+
+      const safeUserId = userId && mongoose.isValidObjectId(userId)
+        ? new mongoose.Types.ObjectId(userId)
+        : userId;
+
       // 1. Tạo bản ghi trong UserProblem với dữ liệu đã format chuẩn
       const newSubmission = await userProblem.create({
         ...req.body,
-        userId: new mongoose.Types.ObjectId(userId),
-        problemId: new mongoose.Types.ObjectId(problemId),
+        ...(safeUserId ? { userId: safeUserId } : {}),
+        problemId: safeProblemId,
         testResults: formattedTestResults,
         subtasksResult: formattedSubtasksResult,
       });
 
-      // 2. Thêm problemId vào mảng problems của User (không trùng lặp)
-      if (problemId) {
+      // 2. Thêm problemId vào mảng problems của User (nếu cả 2 là ObjectId hợp lệ)
+      if (userId && mongoose.isValidObjectId(userId) && mongoose.isValidObjectId(problemId)) {
         await User.findByIdAndUpdate(userId, {
           $addToSet: { problems: new mongoose.Types.ObjectId(problemId) },
         });
@@ -150,4 +172,4 @@ class problemService {
   }
 }
 
-export default new problemService();
+export default new problemService();
