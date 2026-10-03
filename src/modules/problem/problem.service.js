@@ -30,22 +30,28 @@ class problemService {
   async getUserProblems(req) {
     try {
       const userId =
+        req.query?.userId ||
         req.session?.passport?.user?.id ||
         req.session?.passport?.user?._id ||
         req.user?._id ||
         req.user?.id;
-      if (!userId) return [];
 
       const allProblems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
-      const problemOrderMap = new Map();
+      const problemMap = new Map();
       allProblems.forEach((p, idx) => {
-        problemOrderMap.set(String(p._id), idx + 1);
-        if (p.id) problemOrderMap.set(String(p.id), idx + 1);
+        const orderNum = idx + 1;
+        const code = p.code || String(orderNum).padStart(2, "0");
+        const enriched = { ...p, order: orderNum, code };
+        problemMap.set(String(p._id), enriched);
+        if (p.id) problemMap.set(String(p.id), enriched);
+        if (p.code) problemMap.set(String(p.code), enriched);
       });
 
-      const query = mongoose.isValidObjectId(userId)
-        ? { $or: [{ userId: new mongoose.Types.ObjectId(userId) }, { userId: String(userId) }] }
-        : { userId };
+      const query = userId
+        ? (mongoose.isValidObjectId(userId)
+          ? { $or: [{ userId: new mongoose.Types.ObjectId(userId) }, { userId: String(userId) }] }
+          : { userId: String(userId) })
+        : {};
 
       const problems = await userProblem
         .find(query)
@@ -54,11 +60,15 @@ class problemService {
         .lean();
 
       return problems.map((item) => {
-        if (item.problemId) {
-          const pId = String(item.problemId._id || item.problemId.id);
-          const orderNum = problemOrderMap.get(pId) || 1;
-          item.problemId.order = orderNum;
-          item.problemId.code = item.problemId.code || String(orderNum).padStart(2, "0");
+        const rawPId = String(item.problemId?._id || item.problemId?.id || item.problemId || "");
+        const matched = problemMap.get(rawPId) || (typeof item.problemId === "object" ? item.problemId : null);
+        if (matched) {
+          item.problemId = {
+            ...matched,
+            ...(typeof item.problemId === "object" ? item.problemId : {}),
+            order: matched.order,
+            code: matched.code,
+          };
         }
         return item;
       });
