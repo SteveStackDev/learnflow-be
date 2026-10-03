@@ -4,6 +4,9 @@ import {
   getUserProblems,
   getProblem,
   saveProblem,
+  createProblem,
+  updateProblem,
+  deleteProblem,
 } from "#modules/problem/problem.controller.js";
 
 const router = express.Router();
@@ -12,10 +15,13 @@ const router = express.Router();
 router.get("/all", getAllProblems);
 router.get("/user", getUserProblems);
 
-// GET - Dynamic route đặt SAU
-router.get("/:id", getProblem);
-
-// POST - Lưu bài làm
+// POST - Tạo bài tập mới & Lưu bài làm
+router.post("/", createProblem);
 router.post("/save", saveProblem);
+
+// Dynamic routes
+router.get("/:id", getProblem);
+router.put("/:id", updateProblem);
+router.delete("/:id", deleteProblem);
 
 export default router;

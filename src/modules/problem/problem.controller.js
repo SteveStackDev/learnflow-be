@@ -77,3 +77,54 @@ export const saveProblem = async (req, res) => {
     );
   }
 };
+
+export const createProblem = async (req, res) => {
+  try {
+    const newProblem = await problemService.createProblem(req);
+
+    return res.status(StatusCodes.CREATED).send({
+      status: "success",
+      message: "Tạo bài tập thành công",
+      data: newProblem,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Tạo bài tập thất bại: ${error.message}`,
+    );
+  }
+};
+
+export const updateProblem = async (req, res) => {
+  try {
+    const updated = await problemService.updateProblem(req);
+
+    return res.status(StatusCodes.OK).send({
+      status: "success",
+      message: "Cập nhật bài tập thành công",
+      data: updated,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Cập nhật bài tập thất bại: ${error.message}`,
+    );
+  }
+};
+
+export const deleteProblem = async (req, res) => {
+  try {
+    const deleted = await problemService.deleteProblem(req);
+
+    return res.status(StatusCodes.OK).send({
+      status: "success",
+      message: "Xóa bài tập thành công",
+      data: deleted,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Xóa bài tập thất bại: ${error.message}`,
+    );
+  }
+};

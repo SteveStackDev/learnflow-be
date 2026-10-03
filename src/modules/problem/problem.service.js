@@ -207,6 +207,93 @@ class problemService {
       );
     }
   }
+
+  async createProblem(req) {
+    try {
+      const data = req.body || req;
+      const count = await Problem.countDocuments();
+      const orderNum = count + 1;
+      const code = data.code || String(orderNum).padStart(2, "0");
+
+      const timeLimitNum = parseFloat(String(data.timeLimit || data.time_limit || "1.0").replace("s", "")) || 1.0;
+      const memoryLimitNum = parseInt(String(data.memoryLimit || data.memory_limit || "256").replace("MB", "")) || 256;
+
+      const inputDescription = data.inputDescription || (Array.isArray(data.inputFormat) ? data.inputFormat.join("\n") : (data.inputFormat || ""));
+      const outputDescription = data.outputDescription || (Array.isArray(data.outputFormat) ? data.outputFormat.join("\n") : (data.outputFormat || ""));
+      const constraints = Array.isArray(data.constraints)
+        ? data.constraints
+        : (data.constraints ? String(data.constraints).split("\n").filter(Boolean) : []);
+
+      const newId = new mongoose.Types.ObjectId();
+
+      const newProblem = await Problem.create({
+        _id: newId,
+        id: String(newId),
+        title: data.title || "Bài tập thuật toán mới",
+        statement: data.statement || data.description || "",
+        imageDescription: data.imageDescription || "",
+        inputDescription,
+        outputDescription,
+        constraints,
+        topic: data.topic || "Array & Hashing",
+        difficulty: data.difficulty || "Easy",
+        points: Number(data.points) || 500,
+        status: data.status || "Active",
+        timeLimit: timeLimitNum,
+        memoryLimit: memoryLimitNum,
+        examples: Array.isArray(data.examples) ? data.examples : [],
+        subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
+        order: orderNum,
+        code,
+      });
+
+      return newProblem;
+    } catch (error) {
+      console.error("Lỗi khi createProblem:", error);
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        `Tạo bài tập thất bại: ${error.message}`,
+      );
+    }
+  }
+
+  async updateProblem(req) {
+    try {
+      const id = req.params?.id || req.body?.id || req.body?._id;
+      const data = req.body || req;
+
+      const query = mongoose.isValidObjectId(id)
+        ? { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
+        : { _id: id };
+
+      const updated = await Problem.findOneAndUpdate(query, data, { new: true });
+      return updated;
+    } catch (error) {
+      console.error("Lỗi khi updateProblem:", error);
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        `Cập nhật bài tập thất bại: ${error.message}`,
+      );
+    }
+  }
+
+  async deleteProblem(req) {
+    try {
+      const id = req.params?.id || req;
+      const query = mongoose.isValidObjectId(id)
+        ? { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
+        : { _id: id };
+
+      const deleted = await Problem.findOneAndDelete(query);
+      return deleted;
+    } catch (error) {
+      console.error("Lỗi khi deleteProblem:", error);
+      throw new ApiError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        `Xóa bài tập thất bại: ${error.message}`,
+      );
+    }
+  }
 }
 
 export default new problemService();
