@@ -8,8 +8,16 @@ import mongoose from "mongoose";
 class problemService {
   async getAllProblems() {
     try {
-      const problems = await Problem.find();
-      return problems;
+      const problems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
+      return problems.map((p, index) => {
+        const orderNum = index + 1;
+        const code = p.code || String(orderNum).padStart(2, "0");
+        return {
+          ...p,
+          order: orderNum,
+          code,
+        };
+      });
     } catch (error) {
       console.error("Lỗi getAllProblems:", error);
       throw new ApiError(
@@ -28,6 +36,13 @@ class problemService {
         req.user?.id;
       if (!userId) return [];
 
+      const allProblems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
+      const problemOrderMap = new Map();
+      allProblems.forEach((p, idx) => {
+        problemOrderMap.set(String(p._id), idx + 1);
+        if (p.id) problemOrderMap.set(String(p.id), idx + 1);
+      });
+
       const query = mongoose.isValidObjectId(userId)
         ? { $or: [{ userId: new mongoose.Types.ObjectId(userId) }, { userId: String(userId) }] }
         : { userId };
@@ -35,9 +50,18 @@ class problemService {
       const problems = await userProblem
         .find(query)
         .populate("problemId")
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
 
-      return problems;
+      return problems.map((item) => {
+        if (item.problemId) {
+          const pId = String(item.problemId._id || item.problemId.id);
+          const orderNum = problemOrderMap.get(pId) || 1;
+          item.problemId.order = orderNum;
+          item.problemId.code = item.problemId.code || String(orderNum).padStart(2, "0");
+        }
+        return item;
+      });
     } catch (error) {
       console.error("Lỗi getUserProblems:", error);
       throw new ApiError(
@@ -50,35 +74,32 @@ class problemService {
   async getProblem(req) {
     try {
       const id = req?.params?.id || req;
-      let problem = null;
+      const allProblems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
 
-      if (mongoose.isValidObjectId(id)) {
-        problem = await Problem.findById(id);
+      const foundIndex = allProblems.findIndex(
+        (p) =>
+          String(p._id) === String(id) ||
+          String(p.id) === String(id) ||
+          String(p.code || "").toLowerCase() === String(id).toLowerCase() ||
+          String(p.title || "").toLowerCase() === String(id).toLowerCase() ||
+          (String(id).length <= 4 && (
+            String(p.code) === String(id) ||
+            String(allProblems.indexOf(p) + 1).padStart(2, "0") === String(id) ||
+            String(allProblems.indexOf(p) + 1) === String(id)
+          ))
+      );
+
+      if (foundIndex !== -1) {
+        const problem = allProblems[foundIndex];
+        const orderNum = foundIndex + 1;
+        return {
+          ...problem,
+          order: orderNum,
+          code: problem.code || String(orderNum).padStart(2, "0"),
+        };
       }
 
-      if (!problem) {
-        problem = await Problem.findOne({
-          $or: [
-            { _id: id },
-            { _id: String(id) },
-            { code: id },
-            { title: id },
-          ],
-        });
-      }
-
-      if (!problem) {
-        const all = await Problem.find();
-        problem = all.find(
-          (p) =>
-            String(p._id) === String(id) ||
-            String(p.id) === String(id) ||
-            String(p.code || "").toLowerCase() === String(id).toLowerCase() ||
-            String(p.title || "").toLowerCase() === String(id).toLowerCase(),
-        );
-      }
-
-      return problem;
+      return null;
     } catch (error) {
       console.error(`Lỗi getProblem (id: ${req?.params?.id || req}):`, error);
       throw new ApiError(
