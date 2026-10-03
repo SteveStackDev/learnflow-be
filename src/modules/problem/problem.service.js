@@ -58,8 +58,24 @@ class problemService {
 
       if (!problem) {
         problem = await Problem.findOne({
-          $or: [{ _id: id }, { code: id }, { title: id }],
+          $or: [
+            { _id: id },
+            { _id: String(id) },
+            { code: id },
+            { title: id },
+          ],
         });
+      }
+
+      if (!problem) {
+        const all = await Problem.find();
+        problem = all.find(
+          (p) =>
+            String(p._id) === String(id) ||
+            String(p.id) === String(id) ||
+            String(p.code || "").toLowerCase() === String(id).toLowerCase() ||
+            String(p.title || "").toLowerCase() === String(id).toLowerCase(),
+        );
       }
 
       return problem;
