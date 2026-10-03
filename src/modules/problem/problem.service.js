@@ -47,11 +47,18 @@ class problemService {
         if (p.code) problemMap.set(String(p.code), enriched);
       });
 
-      const query = userId
-        ? (mongoose.isValidObjectId(userId)
-          ? { $or: [{ userId: new mongoose.Types.ObjectId(userId) }, { userId: String(userId) }] }
-          : { userId: String(userId) })
-        : {};
+      let query = {};
+      if (userId) {
+        const userFilters = [
+          { userId: String(userId) },
+          { userId: null },
+          { userId: { $exists: false } },
+        ];
+        if (mongoose.isValidObjectId(userId)) {
+          userFilters.unshift({ userId: new mongoose.Types.ObjectId(userId) });
+        }
+        query = { $or: userFilters };
+      }
 
       const problems = await userProblem
         .find(query)
@@ -70,6 +77,9 @@ class problemService {
             code: matched.code,
           };
         }
+        const sourceCode = item.sourceCode || item.submittedCode || item.code || item.codeContent || item.source_code || "";
+        item.sourceCode = sourceCode;
+        item.submittedCode = sourceCode;
         return item;
       });
     } catch (error) {
