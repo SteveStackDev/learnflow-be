@@ -223,32 +223,45 @@ class UserService {
   async resetPassword(req) {
     try {
       const userId = req.session?.passport?.user?.id;
-      const user = await User.findById(new mongoose.Types.ObjectId(userId));
+      if (!userId) throw new Error("Chưa đăng nhập hoặc phiên làm việc hết hạn");
+
+      // Lấy user, đảm bảo lấy thêm trường password nếu schema đặt select: false
+      const user = await User.findById(new mongoose.Types.ObjectId(userId)).select('+password');
 
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      if(user.googleId !== "" || user.githubId !== "") { 
+      // 1. Kiểm tra tài khoản Social Login (kiểm tra tồn tại giá trị thay vì so sánh chuỗi rỗng)
+      if (user.googleId || user.githubId) { 
         throw new Error("Tài khoản này được tạo bởi Google hoặc GitHub, không thể đổi mật khẩu");
       }
 
+      const { oldPassword, newPassword } = req.body || {};
+
+      // 2. Validate dữ liệu đầu vào trước khi truyền vào bcrypt
+      if (!oldPassword || !newPassword) {
+        throw new Error("Vui lòng nhập đầy đủ mật khẩu cũ và mật khẩu mới");
+      }
+
+      if (!user.password) {
+        throw new Error("Tài khoản chưa thiết lập mật khẩu");
+      }
+
+      // 3. So sánh mật khẩu cũ
       const comparePasswordResult = await bcrypt.compare(
-        req.body.oldPassword,
-        user.password,
+        oldPassword,
+        user.password
       );
 
       if (!comparePasswordResult) {
         throw new Error("Mật khẩu cũ không chính xác");
       }
 
-      console.log(comparePasswordResult, req.body);
-
-      const hashed_password = await bcrypt.hash(req.body.newPassword, saltRounds);
+      // 4. Mã hóa và lưu mật khẩu mới
+      const hashed_password = await bcrypt.hash(newPassword, saltRounds);
       await User.updateOne(
         { _id: user._id },
         { $set: { password: hashed_password } }
       );
-
-      console.log(hashed_password);
 
       return { success: true, message: "Cập nhật mật khẩu thành công" };
     } catch (error) {
