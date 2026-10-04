@@ -227,7 +227,7 @@ class UserService {
 
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      if(user.googleId == "" || user.githubId == "") { 
+      if(user.googleId !== "" || user.githubId !== "") { 
         throw new Error("Tài khoản này được tạo bởi Google hoặc GitHub, không thể đổi mật khẩu");
       }
 
