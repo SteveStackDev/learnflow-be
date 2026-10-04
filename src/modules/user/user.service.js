@@ -237,6 +237,10 @@ class UserService {
 
       const { oldPassword, newPassword } = req.body || {};
 
+      console.log("req.body:", req.body);
+      console.log("oldPassword:", oldPassword);
+      console.log("newPassword:", newPassword);
+
       // 2. Validate dữ liệu đầu vào trước khi truyền vào bcrypt
       if (!oldPassword || !newPassword) {
         throw new Error("Vui lòng nhập đầy đủ mật khẩu cũ và mật khẩu mới");
