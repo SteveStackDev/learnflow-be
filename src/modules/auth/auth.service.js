@@ -29,7 +29,7 @@ export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) 
     user.password,
   );
 
-  console.log("compareEmailResult:", compareEmailResult);
+  console.log(inputPassword, user.password);
   console.log("comparePasswordResult:", comparePasswordResult);
 
 
