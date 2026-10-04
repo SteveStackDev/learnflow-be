@@ -8,17 +8,14 @@ export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) 
 
   const compareEmailResult = user.email === inputEmail;
 
-  const comparePasswordResult = await bcrypt.compare(
+  const comparePasswordResult = bcrypt.compareSync(
     inputPassword,
     user.password,
   );
 
-  // --- IN LOG DEBUG ---
-  console.log("=== DEBUG BCRYPT ===");
-  console.log("1. Input Pass Raw:", JSON.stringify(inputPassword)); // Xem có bị dính khoảng trắng/dấu cách không
-  console.log("2. Pass trong DB:", user.password);
-  console.log("3. Do dai Pass trong DB:", user.password?.length); // CẦN ĐẢM BẢO ĐÚNG 60 KÝ TỰ!
-  console.log("====================");
+    const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
+    const testSelf = await bcrypt.compare(inputPassword, hashed_password);
+    console.log("Test Hash & Compare tai cho:", testSelf);
 
   console.log(inputPassword, user.password);
   console.log("comparePasswordResult:", comparePasswordResult);
