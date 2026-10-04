@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 
 const saltRounds = 10;
 
-export const checkUserAvailable = async (inputEmail, inputPassword, body) => {
+export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) => {
   let user = await User.findOne({ email: inputEmail });
 
 
@@ -30,6 +30,25 @@ export const checkUserAvailable = async (inputEmail, inputPassword, body) => {
 
   if (!comparePasswordResult || !compareEmailResult) {
     return;
+  }
+
+  return user;
+};
+
+export const checkUserAvailableSignUp = async (inputUsername, inputPassword, body) => {
+  let user = await User.findOne({ username: inputUsername });
+
+
+  if (!user) {
+    const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
+
+    const newUser = await User.insertOne({
+      username: body.username,
+      password: hashed_password,
+      email: body.email,
+    });
+
+    return newUser;
   }
 
   return user;
