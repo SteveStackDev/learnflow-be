@@ -19,6 +19,8 @@ export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) 
     return newUser;
   }
 
+  console.log("User found in auth.service.js file:", user);
+
   const compareEmailResult = user.email === inputEmail;
 
 
@@ -26,6 +28,9 @@ export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) 
     inputPassword,
     user.password,
   );
+
+  console.log("compareEmailResult:", compareEmailResult);
+  console.log("comparePasswordResult:", comparePasswordResult);
 
 
   if (!comparePasswordResult || !compareEmailResult) {
