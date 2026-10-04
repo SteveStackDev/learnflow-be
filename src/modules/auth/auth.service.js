@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 const saltRounds = 10;
 
-export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) => {
+export const checkUserAvailableSignIn = async (inputEmail, inputPassword) => {
   let user = await User.findOne({ email: inputEmail });
 
   const compareEmailResult = user.email === inputEmail;
@@ -12,13 +12,6 @@ export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) 
     inputPassword,
     user.password,
   );
-
-    const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
-    const testSelf = await bcrypt.compare(inputPassword, hashed_password);
-    console.log("Test Hash & Compare tai cho:", testSelf);
-
-  console.log(inputPassword, user.password);
-  console.log("comparePasswordResult:", comparePasswordResult);
 
 
   if (!comparePasswordResult || !compareEmailResult) {
@@ -29,8 +22,7 @@ export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) 
 };
 
 export const checkUserAvailableSignUp = async (inputUsername, inputPassword, body) => {
-  let user = await User.findOne({ username: inputUsername });
-
+  let user = await User.findOne({ username: inputUsername, email: body.email });
 
   if (!user) {
     const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
