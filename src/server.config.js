@@ -33,9 +33,9 @@ const connectServer = () => {
     }),
   );
 
-  // Middlewares For Data Type From Client
-  app.use(bodyParser.json());
-  app.use(bodyParser.urlencoded({ extended: true }));
+  // Middlewares For Data Type From Client - Hỗ trợ dữ liệu test case lớn lên tới 50MB
+  app.use(bodyParser.json({ limit: "50mb" }));
+  app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 
   // Express Session

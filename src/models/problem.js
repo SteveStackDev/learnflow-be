@@ -52,6 +52,7 @@ const problemSchema = new mongoose.Schema(
     memoryLimit: { type: Number, default: 256 },
     examples: [exampleSchema],
     subtasks: [subtaskSchema],
+    testCases: [testCaseSchema],
     createdAt: { type: Date, default: Date.now },
   },
   {

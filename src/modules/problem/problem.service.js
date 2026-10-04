@@ -263,6 +263,7 @@ class problemService {
         memoryLimit: memoryLimitNum,
         examples: Array.isArray(data.examples) ? data.examples : [],
         subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
+        testCases: Array.isArray(data.testCases) ? data.testCases : [],
         order: orderNum,
         code,
       });
