@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import passport from "passport";
 import User from "#models/user.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const saltRounds = 10;
 

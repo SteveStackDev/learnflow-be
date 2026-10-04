@@ -2,7 +2,7 @@ import User from "#models/user.js";
 import otpService from "#services/otp.service.js";
 import uploadService from "#services/upload.service.js";
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwtService from "#services/jwt.service.js";
 import mailService from "#services/mail.service.js";
 import UserCourse from "#models/userCourse.js";

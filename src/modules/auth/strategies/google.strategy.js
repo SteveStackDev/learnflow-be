@@ -1,7 +1,7 @@
 import "dotenv/config";
 import passport from "passport";
 import User from "#models/user.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 const saltRounds = 10;
