@@ -6,19 +6,6 @@ const saltRounds = 10;
 export const checkUserAvailableSignIn = async (inputEmail, inputPassword, body) => {
   let user = await User.findOne({ email: inputEmail });
 
-
-  if (!user) {
-    const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
-
-    const newUser = await User.insertOne({
-      username: body.username,
-      password: hashed_password,
-      email: inputEmail,
-    });
-
-    return newUser;
-  }
-
   const compareEmailResult = user.email === inputEmail;
 
 
@@ -45,7 +32,7 @@ export const checkUserAvailableSignUp = async (inputUsername, inputPassword, bod
   if (!user) {
     const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
 
-    const newUser = await User.insertOne({
+    const newUser = await User.create({
       username: body.username,
       password: hashed_password,
       email: body.email,
