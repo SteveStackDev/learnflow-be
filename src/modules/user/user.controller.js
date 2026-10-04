@@ -118,6 +118,23 @@ export const changePassword = async (req, res) => {
   }
 };
 
+export const changeUsername = async (req, res) => {
+  try {
+    const result = await userService.changeUsername(req);
+
+    return res.status(200).json({
+      success: true,
+      message: "Đổi tên người dùng thành công",
+      data: result,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 export const resetPassword = async (req, res) => {
   try {
     const result = await userService.resetPassword(req);

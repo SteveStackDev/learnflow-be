@@ -12,7 +12,8 @@ import {
 } from "#modules/auth/auth.controller.js";
 import { ensureAuth } from "#middlewares/ensureAuth.middleware.js";
 import {
-  localStrategy,
+  localStrategySignIn,
+  localStrategySignUp,
   validateAuth,
   validateAuthSignIn,
 } from "#modules/auth/auth.middleware.js";
@@ -93,8 +94,8 @@ router.get("/get-me", (req, res, next) => {
 });
 
 // POST
-router.post("/sign-up", validateAuth, localStrategy, signUpPost);
-router.post("/sign-in", validateAuthSignIn, localStrategy, SignInPost);
+router.post("/sign-up", validateAuth, localStrategySignUp, signUpPost);
+router.post("/sign-in", validateAuthSignIn, localStrategySignIn, SignInPost);
 router.post("/sign-out", SignOut);
 
 export default router;

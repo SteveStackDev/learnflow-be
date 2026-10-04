@@ -2,7 +2,7 @@ import User from "#models/user.js";
 import otpService from "#services/otp.service.js";
 import uploadService from "#services/upload.service.js";
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwtService from "#services/jwt.service.js";
 import mailService from "#services/mail.service.js";
 import UserCourse from "#models/userCourse.js";
@@ -143,7 +143,6 @@ class UserService {
         throw new Error("Email không tồn tại trong hệ thống");
       }
 
-      // FIX: Sửa lỗi gõ dấu "iđ" -> "id"
       const token = jwtService.generateJWT({ id: user._id });
 
       if (token) {
@@ -186,7 +185,6 @@ class UserService {
       const user = await User.findById(new mongoose.Types.ObjectId(data.id));
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      // FIX: Lấy newPassword chuẩn từ req.body
       const newPassword = req.body.newPassword || req.body.password;
       if (!newPassword) throw new Error("Mật khẩu mới không được để trống");
 
@@ -203,23 +201,67 @@ class UserService {
     }
   }
 
-  async resetPassword(req) {
+  async changeUsername(req) {
     try {
       const userId = req.session?.passport?.user?.id;
       const user = await User.findById(new mongoose.Types.ObjectId(userId));
 
       if (!user) throw new Error("Người dùng không tồn tại");
 
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { username: req.body.username } }
+      );
+
+      return { success: true, message: "Cập nhật tên người dùng thành công" };
+    } catch (error) {
+      console.error("Lỗi changeUsername:", error.message);
+      throw error;
+    }
+  }
+
+  async resetPassword(req) {
+    try {
+      const userId = req.session?.passport?.user?.id;
+      if (!userId) throw new Error("Chưa đăng nhập hoặc phiên làm việc hết hạn");
+
+      // Lấy user, đảm bảo lấy thêm trường password nếu schema đặt select: false
+      const user = await User.findById(new mongoose.Types.ObjectId(userId)).select('+password');
+
+      if (!user) throw new Error("Người dùng không tồn tại");
+
+      // 1. Kiểm tra tài khoản Social Login (kiểm tra tồn tại giá trị thay vì so sánh chuỗi rỗng)
+      if (user.googleId || user.githubId) { 
+        throw new Error("Tài khoản này được tạo bởi Google hoặc GitHub, không thể đổi mật khẩu");
+      }
+
+      const { oldPassword, newPassword } = req.body || {};
+
+      console.log("req.body:", req.body);
+      console.log("oldPassword:", oldPassword);
+      console.log("newPassword:", newPassword);
+
+      // 2. Validate dữ liệu đầu vào trước khi truyền vào bcrypt
+      if (!oldPassword || !newPassword) {
+        throw new Error("Vui lòng nhập đầy đủ mật khẩu cũ và mật khẩu mới");
+      }
+
+      if (!user.password) {
+        throw new Error("Tài khoản chưa thiết lập mật khẩu");
+      }
+
+      // 3. So sánh mật khẩu cũ
       const comparePasswordResult = await bcrypt.compare(
-        req.body.oldPassword,
-        user.password,
+        oldPassword,
+        user.password
       );
 
       if (!comparePasswordResult) {
         throw new Error("Mật khẩu cũ không chính xác");
       }
 
-      const hashed_password = await bcrypt.hash(req.body.newPassword, saltRounds);
+      // 4. Mã hóa và lưu mật khẩu mới
+      const hashed_password = await bcrypt.hash(newPassword, saltRounds);
       await User.updateOne(
         { _id: user._id },
         { $set: { password: hashed_password } }

@@ -1,28 +1,14 @@
 import User from "#models/user.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const saltRounds = 10;
 
-export const checkUserAvailable = async (inputEmail, inputPassword, body) => {
+export const checkUserAvailableSignIn = async (inputEmail, inputPassword) => {
   let user = await User.findOne({ email: inputEmail });
-
-
-  if (!user) {
-    const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
-
-    const newUser = await User.insertOne({
-      username: body.username,
-      password: hashed_password,
-      email: inputEmail,
-    });
-
-    return newUser;
-  }
 
   const compareEmailResult = user.email === inputEmail;
 
-
-  const comparePasswordResult = await bcrypt.compare(
+  const comparePasswordResult = bcrypt.compareSync(
     inputPassword,
     user.password,
   );
@@ -30,6 +16,24 @@ export const checkUserAvailable = async (inputEmail, inputPassword, body) => {
 
   if (!comparePasswordResult || !compareEmailResult) {
     return;
+  }
+
+  return user;
+};
+
+export const checkUserAvailableSignUp = async (inputUsername, inputPassword, body) => {
+  let user = await User.findOne({ username: inputUsername, email: body.email });
+
+  if (!user) {
+    const hashed_password = await bcrypt.hash(inputPassword, saltRounds);
+
+    const newUser = await User.create({
+      username: body.username,
+      password: hashed_password,
+      email: body.email,
+    });
+
+    return newUser;
   }
 
   return user;

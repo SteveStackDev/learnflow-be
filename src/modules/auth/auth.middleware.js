@@ -3,14 +3,33 @@ import { z } from "zod";
 import { StatusCodes } from "http-status-codes";
 import ApiError from "#utils/ApiError.js";
 
-export const localStrategy = (req, res, next) => {
-  passport.authenticate("local", { session: true }, (err, user, info) => {
+export const localStrategySignIn = (req, res, next) => {
+  passport.authenticate("local-signin", { session: true }, (err, user, info) => {
     if (err) return next(err);
 
     if (!user) {
       const message =
         info?.message ||
-        "Tên đăng nhập hoặc mật khẩu hoặc email không chính xác";
+        "Mật khẩu hoặc email không chính xác";
+
+      return next(new ApiError(StatusCodes.UNAUTHORIZED, message));
+    }
+
+    req.logIn(user, (err) => {
+      if (err) return next(err);
+      next();
+    });
+  })(req, res, next);
+};
+
+export const localStrategySignUp = (req, res, next) => {
+  passport.authenticate("local-signup", { session: true }, (err, user, info) => {
+    if (err) return next(err);
+
+    if (!user) {
+      const message =
+        info?.message ||
+        "Có lỗi xảy ra trong quá trình đăng ký, vui lòng thử lại";
 
       return next(new ApiError(StatusCodes.UNAUTHORIZED, message));
     }

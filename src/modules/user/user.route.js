@@ -17,6 +17,7 @@ import {
   deleteCourseNote,
   saveCourse,
   saveRoadmap,
+  changeUsername,
 } from "#modules/user/user.controller.js";
 import { validatePassword } from "#modules/user/user.middleware.js";
 import notificationService from "#services/notification.service.js";
@@ -30,6 +31,7 @@ router.get("/verify-email", verifyEmail);
 
 // POST - Auth Required
 router.post("/avatar", ensureAuth, upload.single("image"), updateAvatar);
+router.post("/change-username", ensureAuth, changeUsername);
 router.post("/friend/add", ensureAuth, addNewFriend);
 router.post("/friend/accept", ensureAuth, replyNewFriend);
 router.post("/reset-password", ensureAuth, validatePassword, resetPassword);

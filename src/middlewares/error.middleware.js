@@ -3,7 +3,7 @@ import ApiError from "#utils/ApiError.js";
 
 export const errorHandler = (err, req, res, next) => {
   if (err instanceof ApiError) {
-    console.log("Đã bắt được lỗi ApiError: ");
+    console.log("Đã bắt được lỗi ApiError: ", err);
     return res.status(err.statusCode).json({
       message: err.message,
       ...(err.errors ? { errors: err.errors } : {}),
