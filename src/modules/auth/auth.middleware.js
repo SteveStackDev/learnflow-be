@@ -7,6 +7,8 @@ export const localStrategy = (req, res, next) => {
   passport.authenticate("local", { session: true }, (err, user, info) => {
     if (err) return next(err);
 
+    console.log("User found in auth.middleware.js file:", user);
+
     if (!user) {
       const message =
         info?.message ||

@@ -13,6 +13,8 @@ passport.use(
       try {
         const user = await checkUserAvailable(email, password, req.body);
 
+        console.log("User found in local.strategy.js file:", user);
+
         if (!user) {
           return done(null, false, {
             message: "Tài khoản hoặc mật khẩu hoặc email không đúng",
