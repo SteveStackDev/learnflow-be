@@ -203,6 +203,25 @@ class UserService {
     }
   }
 
+  async changeUsername(req) {
+    try {
+      const userId = req.session?.passport?.user?.id;
+      const user = await User.findById(new mongoose.Types.ObjectId(userId));
+
+      if (!user) throw new Error("Người dùng không tồn tại");
+
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { username: req.body.username } }
+      );
+
+      return { success: true, message: "Cập nhật tên người dùng thành công" };
+    } catch (error) {
+      console.error("Lỗi changeUsername:", error.message);
+      throw error;
+    }
+  }
+
   async resetPassword(req) {
     try {
       const userId = req.session?.passport?.user?.id;
