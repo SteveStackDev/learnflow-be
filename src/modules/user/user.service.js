@@ -240,11 +240,15 @@ class UserService {
         throw new Error("Mật khẩu cũ không chính xác");
       }
 
+      console.log(comparePasswordResult, req.body);
+
       const hashed_password = await bcrypt.hash(req.body.newPassword, saltRounds);
       await User.updateOne(
         { _id: user._id },
         { $set: { password: hashed_password } }
       );
+
+      console.log(hashed_password);
 
       return { success: true, message: "Cập nhật mật khẩu thành công" };
     } catch (error) {
