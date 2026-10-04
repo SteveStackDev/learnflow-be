@@ -1,9 +1,71 @@
 import ApiError from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 import Problem from "#models/problem.js";
+import ProblemTestCase from "#models/problemTestCase.js";
 import userProblem from "#models/userProblem.js";
 import User from "#models/user.js";
 import mongoose from "mongoose";
+
+// Helper tái cấu trúc Subtasks & TestCases từ ProblemTestCase vào Problem
+async function attachTestCasesToProblem(problem) {
+  if (!problem) return problem;
+  const rawPId = problem._id || problem.id;
+  const pIdStr = String(rawPId);
+
+  const queryIds = [pIdStr];
+  if (mongoose.isValidObjectId(rawPId)) {
+    queryIds.push(new mongoose.Types.ObjectId(rawPId));
+  }
+  if (problem.id && problem.id !== pIdStr) {
+    queryIds.push(problem.id);
+  }
+
+  const storedTests = await ProblemTestCase.find({
+    problemId: { $in: queryIds },
+  })
+    .sort({ order: 1 })
+    .lean();
+
+  if (storedTests && storedTests.length > 0) {
+    // 1. Gắn testCases phẳng
+    problem.testCases = storedTests.map((t, idx) => ({
+      id: t.order || idx + 1,
+      order: t.order || idx + 1,
+      input: t.input || "",
+      expected: t.expected || "",
+      points: Number(t.points) || 0,
+      isHidden: Boolean(t.isHidden),
+      subtaskId: t.subtaskId,
+      subtaskName: t.subtaskName,
+    }));
+
+    // 2. Phân bổ vào từng subtask
+    if (Array.isArray(problem.subtasks) && problem.subtasks.length > 0) {
+      problem.subtasks = problem.subtasks.map((st, sIdx) => {
+        const stId = st.id ?? sIdx + 1;
+        const matchingTests = storedTests.filter(
+          (t) =>
+            String(t.subtaskId) === String(stId) ||
+            String(t.subtaskName) === String(st.name) ||
+            (sIdx === 0 && !t.subtaskId && !t.subtaskName)
+        );
+
+        return {
+          ...st,
+          testCases: matchingTests.map((t, tIdx) => ({
+            id: t.order || tIdx + 1,
+            input: t.input || "",
+            expected: t.expected || "",
+            points: Number(t.points) || 0,
+            isHidden: Boolean(t.isHidden),
+          })),
+        };
+      });
+    }
+  }
+
+  return problem;
+}
 
 class problemService {
   async getAllProblems() {
@@ -112,11 +174,12 @@ class problemService {
       if (foundIndex !== -1) {
         const problem = allProblems[foundIndex];
         const orderNum = foundIndex + 1;
-        return {
+        const enriched = {
           ...problem,
           order: orderNum,
           code: problem.code || String(orderNum).padStart(2, "0"),
         };
+        return await attachTestCasesToProblem(enriched);
       }
 
       return null;
@@ -245,7 +308,57 @@ class problemService {
         : (data.constraints ? String(data.constraints).split("\n").filter(Boolean) : []);
 
       const newId = new mongoose.Types.ObjectId();
+      const allTestCasesToInsert = [];
+      let globalTestOrder = 1;
 
+      // 1. Tách Test Cases ra khỏi Subtasks để lưu riêng từng Document (tránh vượt ngưỡng 16MB BSON Document Limit của MongoDB)
+      const sanitizedSubtasks = Array.isArray(data.subtasks)
+        ? data.subtasks.map((st, sIdx) => {
+          const stId = st.id ?? sIdx + 1;
+          const stName = st.name || `Subtask ${sIdx + 1}`;
+
+          if (Array.isArray(st.testCases)) {
+            st.testCases.forEach((tc) => {
+              allTestCasesToInsert.push({
+                problemId: newId,
+                subtaskId: stId,
+                subtaskName: stName,
+                order: globalTestOrder++,
+                input: String(tc.input || ""),
+                expected: String(tc.expected || ""),
+                points: Number(tc.points) || 0,
+                isHidden: Boolean(tc.isHidden),
+              });
+            });
+          }
+
+          return {
+            id: stId,
+            name: stName,
+            points: Number(st.points) || 0,
+            constraints: st.constraints || "",
+            testCases: [], // Giữ nhẹ Problem Document
+          };
+        })
+        : [];
+
+      // Dự phòng nếu data truyền testCases phẳng
+      if (allTestCasesToInsert.length === 0 && Array.isArray(data.testCases)) {
+        data.testCases.forEach((tc) => {
+          allTestCasesToInsert.push({
+            problemId: newId,
+            subtaskId: tc.subtaskId || 1,
+            subtaskName: tc.subtaskName || "Subtask 1",
+            order: globalTestOrder++,
+            input: String(tc.input || ""),
+            expected: String(tc.expected || ""),
+            points: Number(tc.points) || 0,
+            isHidden: Boolean(tc.isHidden),
+          });
+        });
+      }
+
+      // 2. Tạo bản ghi Problem (nhẹ, chuẩn SEO & metadata)
       const newProblem = await Problem.create({
         _id: newId,
         id: String(newId),
@@ -262,13 +375,19 @@ class problemService {
         timeLimit: timeLimitNum,
         memoryLimit: memoryLimitNum,
         examples: Array.isArray(data.examples) ? data.examples : [],
-        subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
-        testCases: Array.isArray(data.testCases) ? data.testCases : [],
+        subtasks: sanitizedSubtasks,
+        testCases: [],
         order: orderNum,
         code,
       });
 
-      return newProblem;
+      // 3. Lưu toàn bộ các Test Cases riêng biệt vào collection ProblemTestCase (mỗi test case là 1 doc độc lập)
+      if (allTestCasesToInsert.length > 0) {
+        await ProblemTestCase.insertMany(allTestCasesToInsert);
+      }
+
+      const problemObj = newProblem.toObject ? newProblem.toObject() : newProblem;
+      return await attachTestCasesToProblem(problemObj);
     } catch (error) {
       console.error("Lỗi khi createProblem:", error);
       throw new ApiError(
@@ -287,8 +406,76 @@ class problemService {
         ? { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
         : { _id: id };
 
-      const updated = await Problem.findOneAndUpdate(query, data, { new: true });
-      return updated;
+      const allTestCasesToInsert = [];
+      let globalTestOrder = 1;
+      let hasTestCasesToUpdate = false;
+
+      // Chuẩn hóa subtasks và trích xuất test cases
+      if (Array.isArray(data.subtasks)) {
+        hasTestCasesToUpdate = true;
+        data.subtasks = data.subtasks.map((st, sIdx) => {
+          const stId = st.id ?? sIdx + 1;
+          const stName = st.name || `Subtask ${sIdx + 1}`;
+
+          if (Array.isArray(st.testCases)) {
+            st.testCases.forEach((tc) => {
+              allTestCasesToInsert.push({
+                problemId: id,
+                subtaskId: stId,
+                subtaskName: stName,
+                order: globalTestOrder++,
+                input: String(tc.input || ""),
+                expected: String(tc.expected || ""),
+                points: Number(tc.points) || 0,
+                isHidden: Boolean(tc.isHidden),
+              });
+            });
+          }
+
+          return {
+            id: stId,
+            name: stName,
+            points: Number(st.points) || 0,
+            constraints: st.constraints || "",
+            testCases: [],
+          };
+        });
+      }
+
+      if (allTestCasesToInsert.length === 0 && Array.isArray(data.testCases)) {
+        hasTestCasesToUpdate = true;
+        data.testCases.forEach((tc) => {
+          allTestCasesToInsert.push({
+            problemId: id,
+            subtaskId: tc.subtaskId || 1,
+            subtaskName: tc.subtaskName || "Subtask 1",
+            order: globalTestOrder++,
+            input: String(tc.input || ""),
+            expected: String(tc.expected || ""),
+            points: Number(tc.points) || 0,
+            isHidden: Boolean(tc.isHidden),
+          });
+        });
+      }
+      data.testCases = [];
+
+      const updated = await Problem.findOneAndUpdate(query, data, { new: true }).lean();
+
+      if (hasTestCasesToUpdate && updated) {
+        const pId = updated._id || id;
+        const queryIds = [String(pId)];
+        if (mongoose.isValidObjectId(pId)) {
+          queryIds.push(new mongoose.Types.ObjectId(pId));
+        }
+        await ProblemTestCase.deleteMany({ problemId: { $in: queryIds } });
+
+        if (allTestCasesToInsert.length > 0) {
+          const finalTests = allTestCasesToInsert.map((t) => ({ ...t, problemId: pId }));
+          await ProblemTestCase.insertMany(finalTests);
+        }
+      }
+
+      return await attachTestCasesToProblem(updated);
     } catch (error) {
       console.error("Lỗi khi updateProblem:", error);
       throw new ApiError(
@@ -306,6 +493,14 @@ class problemService {
         : { _id: id };
 
       const deleted = await Problem.findOneAndDelete(query);
+      if (deleted) {
+        const pId = deleted._id || id;
+        const queryIds = [String(pId)];
+        if (mongoose.isValidObjectId(pId)) {
+          queryIds.push(new mongoose.Types.ObjectId(pId));
+        }
+        await ProblemTestCase.deleteMany({ problemId: { $in: queryIds } });
+      }
       return deleted;
     } catch (error) {
       console.error("Lỗi khi deleteProblem:", error);
