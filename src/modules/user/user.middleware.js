@@ -1,7 +1,9 @@
+import { z } from "zod";
+
 export const validatePassword = (req, res, next) => {
   const validateAuthSchema = z
     .object({
-      password: z
+      newPassword: z
         .string({ required_error: "Mật khẩu là bắt buộc" })
         .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
         .max(100, "Mật khẩu quá dài")
@@ -17,7 +19,7 @@ export const validatePassword = (req, res, next) => {
         required_error: "Xác nhận mật khẩu là bắt buộc",
       }),
     })
-    .refine((data) => data.password === data.confirmPassword, {
+    .refine((data) => data.newPassword === data.confirmPassword, {
       message: "Mật khẩu xác nhận không khớp",
       path: ["confirmPassword"],
     });

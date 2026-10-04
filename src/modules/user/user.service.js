@@ -143,7 +143,6 @@ class UserService {
         throw new Error("Email không tồn tại trong hệ thống");
       }
 
-      // FIX: Sửa lỗi gõ dấu "iđ" -> "id"
       const token = jwtService.generateJWT({ id: user._id });
 
       if (token) {
@@ -186,7 +185,6 @@ class UserService {
       const user = await User.findById(new mongoose.Types.ObjectId(data.id));
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      // FIX: Lấy newPassword chuẩn từ req.body
       const newPassword = req.body.newPassword || req.body.password;
       if (!newPassword) throw new Error("Mật khẩu mới không được để trống");
 
@@ -228,6 +226,10 @@ class UserService {
       const user = await User.findById(new mongoose.Types.ObjectId(userId));
 
       if (!user) throw new Error("Người dùng không tồn tại");
+
+      if(user.googleId == "" || user.githubId == "") { 
+        throw new Error("Tài khoản này được tạo bởi Google hoặc GitHub, không thể đổi mật khẩu");
+      }
 
       const comparePasswordResult = await bcrypt.compare(
         req.body.oldPassword,
