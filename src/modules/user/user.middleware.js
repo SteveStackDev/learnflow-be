@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export const validatePassword = (req, res, next) => {
   const validateAuthSchema = z
     .object({
@@ -19,6 +17,7 @@ export const validatePassword = (req, res, next) => {
         required_error: "Xác nhận mật khẩu là bắt buộc",
       }),
     })
+    .passthrough() 
     .refine((data) => data.newPassword === data.confirmPassword, {
       message: "Mật khẩu xác nhận không khớp",
       path: ["confirmPassword"],
