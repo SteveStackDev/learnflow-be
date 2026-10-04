@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiError } from "#helpers/api-error.js";
+import { ApiError } from "#utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 
 export const validatePassword = (req, res, next) => {
