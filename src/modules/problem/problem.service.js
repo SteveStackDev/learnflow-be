@@ -400,11 +400,32 @@ class problemService {
   async updateProblem(req) {
     try {
       const id = req.params?.id || req.body?.id || req.body?._id;
-      const data = req.body || req;
+      const data = { ...(req.body || req) };
 
       const query = mongoose.isValidObjectId(id)
-        ? { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }] }
-        : { _id: id };
+        ? { $or: [{ _id: new mongoose.Types.ObjectId(id) }, { _id: id }, { id: String(id) }] }
+        : { $or: [{ _id: id }, { id: String(id) }] };
+
+      if (data.timeLimit || data.time_limit) {
+        data.timeLimit = parseFloat(String(data.timeLimit || data.time_limit || "1.0").replace("s", "")) || 1.0;
+      }
+      if (data.memoryLimit || data.memory_limit) {
+        data.memoryLimit = parseInt(String(data.memoryLimit || data.memory_limit || "256").replace("MB", "")) || 256;
+      }
+      if (data.inputFormat) {
+        data.inputDescription = Array.isArray(data.inputFormat) ? data.inputFormat.join("\n") : data.inputFormat;
+      }
+      if (data.outputFormat) {
+        data.outputDescription = Array.isArray(data.outputFormat) ? data.outputFormat.join("\n") : data.outputFormat;
+      }
+      if (data.constraints) {
+        data.constraints = Array.isArray(data.constraints)
+          ? data.constraints
+          : String(data.constraints).split("\n").filter(Boolean);
+      }
+      if (data.points != null) {
+        data.points = Number(data.points) || 500;
+      }
 
       const allTestCasesToInsert = [];
       let globalTestOrder = 1;

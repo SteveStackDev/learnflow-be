@@ -111,3 +111,19 @@ export const createCourse = async (req, res) => {
     );
   }
 };
+
+export const updateCourse = async (req, res) => {
+  try {
+    const result = await courseService.updateCourse(req);
+    res.status(StatusCodes.OK).send({
+      status: "success",
+      message: "Cập nhật course thành công",
+      data: result,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Cập nhật course thất bại: ${error.message}`,
+    );
+  }
+};

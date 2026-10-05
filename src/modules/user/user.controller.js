@@ -124,11 +124,11 @@ export const changeUsername = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Đổi tên người dùng thành công",
+      message: result?.message || "Đổi tên người dùng thành công",
       data: result,
     });
   } catch (err) {
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: err.message,
     });
@@ -141,11 +141,11 @@ export const resetPassword = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Cập nhật mật khẩu thành công",
+      message: result?.message || "Cập nhật mật khẩu thành công",
       data: result,
     });
   } catch (err) {
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: err.message,
     });

@@ -75,6 +75,22 @@ export const createRoadmap = async (req, res) => {
   }
 };
 
+export const updateRoadmap = async (req, res) => {
+  try {
+    const result = await roadmapService.updateRoadmap(req);
+    res.status(StatusCodes.OK).send({
+      status: "success",
+      message: "Cập nhật roadmap thành công",
+      data: result,
+    });
+  } catch (error) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      `Cập nhật roadmap thất bại: ${error.message}`,
+    );
+  }
+};
+
 export const deleteRoadmap = async (req, res) => {
   try {
     const result = await roadmapService.deleteRoadmap(req);

@@ -4,6 +4,7 @@ import {
   getRoadmap,
   getUserRoadmaps,
   createRoadmap,
+  updateRoadmap,
   deleteRoadmap,
 } from "#modules/roadmap/roadmap.controller.js";
 
@@ -16,6 +17,7 @@ router.post("/", createRoadmap);
 
 // Dynamic routes đặt SAU
 router.get("/:slug", getRoadmap);
+router.put("/:id", updateRoadmap);
 router.delete("/:id", deleteRoadmap);
 
 export default router;

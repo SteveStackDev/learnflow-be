@@ -6,6 +6,7 @@ import {
   getUserCourses,
   deleteCourse,
   createCourse,
+  updateCourse,
 } from "#modules/course/course.controller.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.post("/", createCourse);
 // Dynamic routes đặt SAU
 router.get("/curriculum/:courseId", getCurriculum);
 router.get("/:id", getCourse);
+router.put("/:id", updateCourse);
 router.delete("/:id", deleteCourse);
 
 export default router;

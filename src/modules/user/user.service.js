@@ -203,17 +203,61 @@ class UserService {
 
   async changeUsername(req) {
     try {
-      const userId = req.session?.passport?.user?.id;
-      const user = await User.findById(new mongoose.Types.ObjectId(userId));
+      const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+      if (!userId) throw new Error("Chưa đăng nhập hoặc phiên làm việc hết hạn");
 
+      const user = await User.findById(new mongoose.Types.ObjectId(userId));
       if (!user) throw new Error("Người dùng không tồn tại");
+
+      const newUsername = req.body?.username ? String(req.body.username).trim() : "";
+
+      if (!newUsername) {
+        throw new Error("Tên người dùng không được để trống");
+      }
+
+      if (newUsername.length < 3 || newUsername.length > 30) {
+        throw new Error("Tên người dùng phải có độ dài từ 3 đến 30 ký tự");
+      }
+
+      const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
+      if (!usernameRegex.test(newUsername)) {
+        throw new Error("Tên người dùng chỉ được chứa chữ cái, chữ số, dấu gạch dưới (_), gạch ngang (-) hoặc dấu chấm (.)");
+      }
+
+      // Nếu username trùng với username hiện tại
+      if (user.username === newUsername) {
+        return {
+          success: true,
+          message: "Tên người dùng không thay đổi",
+          username: newUsername,
+        };
+      }
+
+      // Kiểm tra xem username mới đã có ai sử dụng chưa (trừ chính user này)
+      const existingUser = await User.findOne({
+        username: { $regex: new RegExp(`^${newUsername}$`, "i") },
+        _id: { $ne: user._id },
+      });
+
+      if (existingUser) {
+        throw new Error("Tên người dùng này đã có người sử dụng, vui lòng chọn tên khác");
+      }
 
       await User.updateOne(
         { _id: user._id },
-        { $set: { username: req.body.username } }
+        { $set: { username: newUsername } }
       );
 
-      return { success: true, message: "Cập nhật tên người dùng thành công" };
+      // Đồng bộ thông tin trong session nếu có
+      if (req.session?.passport?.user) {
+        req.session.passport.user.username = newUsername;
+      }
+
+      return {
+        success: true,
+        message: "Cập nhật tên người dùng thành công",
+        username: newUsername,
+      };
     } catch (error) {
       console.error("Lỗi changeUsername:", error.message);
       throw error;
@@ -222,7 +266,7 @@ class UserService {
 
   async resetPassword(req) {
     try {
-      const userId = req.session?.passport?.user?.id;
+      const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
       if (!userId) throw new Error("Chưa đăng nhập hoặc phiên làm việc hết hạn");
 
       // Lấy user, đảm bảo lấy thêm trường password nếu schema đặt select: false
@@ -230,20 +274,24 @@ class UserService {
 
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      // 1. Kiểm tra tài khoản Social Login (kiểm tra tồn tại giá trị thay vì so sánh chuỗi rỗng)
+      // 1. Kiểm tra tài khoản Social Login
       if (user.googleId || user.githubId) { 
-        throw new Error("Tài khoản này được tạo bởi Google hoặc GitHub, không thể đổi mật khẩu");
+        throw new Error("Tài khoản này được đăng ký qua Google hoặc GitHub, không thể đổi mật khẩu");
       }
 
       const { oldPassword, newPassword } = req.body || {};
 
-      console.log("req.body:", req.body);
-      console.log("oldPassword:", oldPassword);
-      console.log("newPassword:", newPassword);
-
       // 2. Validate dữ liệu đầu vào trước khi truyền vào bcrypt
       if (!oldPassword || !newPassword) {
         throw new Error("Vui lòng nhập đầy đủ mật khẩu cũ và mật khẩu mới");
+      }
+
+      if (newPassword.length < 8) {
+        throw new Error("Mật khẩu mới phải có ít nhất 8 ký tự");
+      }
+
+      if (oldPassword === newPassword) {
+        throw new Error("Mật khẩu mới không được trùng với mật khẩu cũ");
       }
 
       if (!user.password) {
@@ -257,7 +305,7 @@ class UserService {
       );
 
       if (!comparePasswordResult) {
-        throw new Error("Mật khẩu cũ không chính xác");
+        throw new Error("Mật khẩu hiện tại không chính xác");
       }
 
       // 4. Mã hóa và lưu mật khẩu mới
@@ -291,7 +339,8 @@ class UserService {
   }
 
   async deleteCourseNote(req) {
-    const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+    const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+    if (!userId) throw new Error("Chưa đăng nhập");
     const courseId = new mongoose.Types.ObjectId(req.body.courseId);
     const lessonId = new mongoose.Types.ObjectId(req.body.lessonId);
     const noteText = req.body.note;
@@ -302,7 +351,7 @@ class UserService {
 
     const updatedUserCourse = await UserCourse.findOneAndUpdate(
       {
-        userId: userId,
+        userId: new mongoose.Types.ObjectId(userId),
         courseId: courseId,
         "curriculum.lessons.lessonId": lessonId,
       },
@@ -337,7 +386,8 @@ class UserService {
   }
 
   async saveCourseNote(req) {
-    const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+    const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+    if (!userId) throw new Error("Chưa đăng nhập");
     const courseId = new mongoose.Types.ObjectId(req.body.courseId);
     const lessonId = new mongoose.Types.ObjectId(req.body.lessonId);
     const noteText = req.body.note;
@@ -348,7 +398,7 @@ class UserService {
 
     const updatedUserCourse = await UserCourse.findOneAndUpdate(
       {
-        userId: userId,
+        userId: new mongoose.Types.ObjectId(userId),
         courseId: courseId,
         "curriculum.lessons.lessonId": lessonId,
       },
@@ -384,10 +434,12 @@ class UserService {
 
   async saveCourse(req) {
     try {
-      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+      if (!userId) throw new Error("Chưa đăng nhập");
+      const userObjectId = new mongoose.Types.ObjectId(userId);
       const courseId = new mongoose.Types.ObjectId(req.body.courseId);
 
-      let userCourse = await UserCourse.findOne({ userId, courseId });
+      let userCourse = await UserCourse.findOne({ userId: userObjectId, courseId });
       if (userCourse) {
         return userCourse;
       }
@@ -431,12 +483,12 @@ class UserService {
       ]);
 
       await User.updateOne(
-        { _id: userId },
+        { _id: userObjectId },
         { $addToSet: { courses: courseId } },
       );
 
       userCourse = await UserCourse.create({
-        userId: userId,
+        userId: userObjectId,
         courseId: courseId,
         curriculum: curriculum,
         progression: 0,
@@ -457,12 +509,14 @@ class UserService {
         throw new Error("Thiếu lessonId trong body");
       }
 
-      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+      if (!userId) throw new Error("Chưa đăng nhập");
+      const userObjectId = new mongoose.Types.ObjectId(userId);
       const lessonObjectId = new mongoose.Types.ObjectId(lessonIdStr);
 
       const updatedUserCourse = await UserCourse.findOneAndUpdate(
         {
-          userId: userId,
+          userId: userObjectId,
           "curriculum.lessons.lessonId": lessonObjectId,
         },
         {
@@ -521,10 +575,18 @@ class UserService {
 
   async getUserCourseCurriculum(req) {
     try {
-      const userId = new mongoose.Types.ObjectId(req.session.passport?.user?.id);
+      const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+      if (!userId) {
+        return {
+          progression: 0,
+          curriculum: [],
+          lastAccessedLessonId: null,
+        };
+      }
+      const userObjectId = new mongoose.Types.ObjectId(userId);
       const courseId = new mongoose.Types.ObjectId(req.params.courseId);
 
-      const userCourse = await UserCourse.findOne({ userId, courseId });
+      const userCourse = await UserCourse.findOne({ userId: userObjectId, courseId });
 
       if (!userCourse) {
         return {
@@ -547,15 +609,27 @@ class UserService {
 
   async saveRoadmap(req) {
     try {
-      const userId = new mongoose.Types.ObjectId(req.session.passport.user.id);
+      const userId = req.session?.passport?.user?.id || req.user?._id || req.user?.id;
+      if (!userId) throw new Error("Chưa đăng nhập");
+      const userObjectId = new mongoose.Types.ObjectId(userId);
       const roadmapId = new mongoose.Types.ObjectId(req.body.roadmapId);
 
-      const result = await User.updateOne(
-        { _id: userId },
-        { $addToSet: { roadmaps: roadmapId } },
-      );
+      const user = await User.findById(userObjectId);
+      const isAlreadySaved = user?.roadmaps?.some((id) => id.toString() === roadmapId.toString());
 
-      return result;
+      if (isAlreadySaved) {
+        await User.updateOne(
+          { _id: userObjectId },
+          { $pull: { roadmaps: roadmapId } },
+        );
+        return { message: "Removed roadmap from saved list", isSaved: false };
+      } else {
+        await User.updateOne(
+          { _id: userObjectId },
+          { $addToSet: { roadmaps: roadmapId } },
+        );
+        return { message: "Saved roadmap successfully", isSaved: true };
+      }
     } catch (error) {
       console.error("Lỗi saveRoadmap:", error.message);
       throw error;
