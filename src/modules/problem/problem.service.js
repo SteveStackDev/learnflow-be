@@ -71,13 +71,85 @@ class problemService {
   async getAllProblems() {
     try {
       const problems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
+      const allSubmissions = await userProblem
+        .find({}, "userId problemId status score maxScore createdAt")
+        .lean();
+
+      // Xây dựng map lookup submissions theo problemId
+      const submissionsByProblemKey = new Map();
+      allSubmissions.forEach((sub) => {
+        const rawPId = String(sub.problemId?._id || sub.problemId?.id || sub.problemId || "");
+        if (!rawPId) return;
+        if (!submissionsByProblemKey.has(rawPId)) {
+          submissionsByProblemKey.set(rawPId, []);
+        }
+        submissionsByProblemKey.get(rawPId).push(sub);
+      });
+
       return problems.map((p, index) => {
         const orderNum = index + 1;
         const code = p.code || String(orderNum).padStart(2, "0");
+
+        // Tìm các submission tương ứng với bài này theo các key nhận dạng
+        const checkKeys = [
+          String(p._id),
+          p.id ? String(p.id) : null,
+          code,
+          p.slug ? String(p.slug) : null,
+        ].filter(Boolean);
+
+        const matchedSubmissions = [];
+        const seenSubIds = new Set();
+        checkKeys.forEach((k) => {
+          const list = submissionsByProblemKey.get(k) || [];
+          list.forEach((s) => {
+            const sId = String(s._id);
+            if (!seenSubIds.has(sId)) {
+              seenSubIds.add(sId);
+              matchedSubmissions.push(s);
+            }
+          });
+        });
+
+        // Mỗi user AC chỉ tính 1 lần/1 người
+        const solvedUsers = new Set();
+        const attemptedUsers = new Set();
+        let totalSubmissions = 0;
+
+        matchedSubmissions.forEach((sub) => {
+          totalSubmissions++;
+          const userKey = sub.userId ? String(sub.userId) : `anon_${sub._id}`;
+          attemptedUsers.add(userKey);
+
+          const statusUpper = String(sub.status || "").trim().toUpperCase();
+          const isAC =
+            statusUpper === "AC" ||
+            statusUpper === "ACCEPTED" ||
+            statusUpper === "SOLVED" ||
+            (sub.score != null &&
+              sub.maxScore != null &&
+              Number(sub.score) >= Number(sub.maxScore) &&
+              Number(sub.maxScore) > 0);
+
+          if (isAC) {
+            solvedUsers.add(userKey);
+          }
+        });
+
+        const solved = solvedUsers.size;
+        const totalUsers = attemptedUsers.size;
+        const acceptanceRate =
+          totalUsers > 0 ? Math.round((solved / totalUsers) * 100) : 0;
+
         return {
           ...p,
           order: orderNum,
           code,
+          solved,
+          totalUsers,
+          totalSubmissions,
+          acceptanceRate,
+          acceptance: `${acceptanceRate}%`,
         };
       });
     } catch (error) {
@@ -98,7 +170,7 @@ class problemService {
         req.user?._id ||
         req.user?.id;
 
-      const allProblems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
+      const allProblems = await this.getAllProblems();
       const problemMap = new Map();
       allProblems.forEach((p, idx) => {
         const orderNum = idx + 1;
@@ -137,6 +209,9 @@ class problemService {
             ...(typeof item.problemId === "object" ? item.problemId : {}),
             order: matched.order,
             code: matched.code,
+            solved: matched.solved,
+            acceptanceRate: matched.acceptanceRate,
+            acceptance: matched.acceptance,
           };
         }
         const sourceCode = item.sourceCode || item.submittedCode || item.code || item.codeContent || item.source_code || "";
@@ -156,7 +231,7 @@ class problemService {
   async getProblem(req) {
     try {
       const id = req?.params?.id || req;
-      const allProblems = await Problem.find().sort({ createdAt: 1, _id: 1 }).lean();
+      const allProblems = await this.getAllProblems();
 
       const foundIndex = allProblems.findIndex(
         (p) =>
@@ -173,13 +248,7 @@ class problemService {
 
       if (foundIndex !== -1) {
         const problem = allProblems[foundIndex];
-        const orderNum = foundIndex + 1;
-        const enriched = {
-          ...problem,
-          order: orderNum,
-          code: problem.code || String(orderNum).padStart(2, "0"),
-        };
-        return await attachTestCasesToProblem(enriched);
+        return await attachTestCasesToProblem(problem);
       }
 
       return null;
